@@ -1,0 +1,64 @@
+export module fibre:system;
+
+import std;
+
+import :common;
+import :fibre;
+import :yield;
+
+export namespace fibre
+{
+export class System
+{
+public:
+  System();
+  ~System();
+
+  [[nodicard]] const Context &context() const noexcept { return _context; }
+
+  [[nodiscard]] std::size_t runningCount() const noexcept { return _fibres.size(); }
+  [[nodiscard]] bool isRunning(Id fibre_id) const noexcept;
+
+  Id start(Fibre &&fibre);
+  bool cancel(Id fibre_id);
+  std::size_t cancel(std::span<const Id> fibre_ids);
+
+  void cancelAll();
+
+  void update(double epoch_time_s);
+
+private:
+  struct FibreState
+  {
+    Id id = InvalidFibre;
+    Fibre fibre;
+    Yield resume = {};
+
+    [[nodiscard]] bool should_resume(const double epoch_time_s) const
+    {
+      const bool timeout_reached = resume.time_s <= epoch_time_s;
+      const bool condition_met = (resume.condition) ? resume.condition() : false;
+      return timeout_reached || condition_met;
+    }
+  };
+
+  struct Expiry
+  {
+    std::vector<std::size_t> indices;
+    std::vector<FibreState> fibres;
+
+    void clear()
+    {
+      indices.clear();
+      fibres.clear();
+    }
+  };
+
+  void cleanupFibres(Expiry &expiry);
+
+  std::vector<FibreState> _fibres{};
+  Id _next_id = 0u;
+  Context _context{};
+  Expiry _expiry{};
+};
+}  // namespace fibre

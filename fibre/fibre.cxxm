@@ -1,0 +1,53 @@
+export module fibre:fibre;
+
+import std;
+
+import :yield;
+
+export namespace fibre
+{
+export class Fibre
+{
+public:
+  struct promise_type
+  {
+    Yield value{};
+    std::exception_ptr exception{};
+
+    Fibre get_return_object() noexcept
+    {
+      return Fibre{ std::coroutine_handle<promise_type>::from_promise(*this) };
+    }
+
+    std::suspend_always initial_suspend() noexcept { return {}; }
+    std::suspend_always final_suspend() noexcept { return {}; }
+    void unhandled_exception() noexcept { exception = std::current_exception(); }
+
+    void return_void() noexcept {}
+    std::suspend_always yield_value(const Yield &value) noexcept
+    {
+      this->value = value;
+      return {};
+    }
+  };
+
+  Fibre() = default;
+  Fibre(std::coroutine_handle<promise_type> handle)
+    : _handle(handle)
+  {}
+  Fibre(const Fibre &) = delete;
+  Fibre(Fibre &&other) noexcept
+    : _handle{ std::exchange(other._handle, {}) }
+  {}
+
+  Fibre &operator=(const Fibre &) = delete;
+
+  ~Fibre();
+
+  [[nodiscard]] bool done() const noexcept { return _handle.done(); }
+  [[nodiscard]] Yield resume() noexcept;
+
+private:
+  std::coroutine_handle<promise_type> _handle;
+};
+}  // namespace fibre

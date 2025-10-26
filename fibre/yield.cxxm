@@ -1,0 +1,27 @@
+export module fibre:yield;
+
+import std;
+
+import :common;
+
+export namespace fibre
+{
+export struct Yield
+{
+  double time_s = 0;
+  WaitCondition condition = {};
+};
+
+export Yield yield()
+{
+  return Yield{};
+}
+export Yield sleep(const double duration_s)
+{
+  return Yield{ .time_s = duration_s };
+}
+export Yield wait(WaitCondition condition, const double timeout_s)
+{
+  return Yield{ .time_s = timeout_s, .condition = std::move(condition) };
+}
+}  // namespace fibre

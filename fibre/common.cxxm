@@ -1,0 +1,16 @@
+export module fibre:common;
+
+import std;
+
+export namespace fibre
+{
+export using Id = std::size_t;
+export using WaitCondition = std::function<bool()>;
+export constexpr Id InvalidFibre = ~static_cast<std::size_t>(0);
+
+export struct Context
+{
+  double epoch_time_s = 0.0;
+  double dt = 0;
+};
+}  // namespace fibre

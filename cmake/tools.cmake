@@ -1,0 +1,5 @@
+macro(ensure_set VAR)
+  if(NOT DEFINED ${VAR})
+    set(${VAR} ${ARGN})
+  endif()
+endmacro(ensure_set)
