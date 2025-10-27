@@ -47,23 +47,31 @@ Id System::start(Fibre &&fibre)
 
 bool System::cancel(const Id fibre_id)
 {
-  return cancel(_fibres, fibre_id, _in_update) || cancel(_new_fibres, fibre_id, false);
+  if (cancel(_fibres, _expiry, fibre_id) || cancel(_new_fibres, _expiry, fibre_id))
+  {
+    if (!_in_update)
+    {
+      cleanupFibres(_expiry);
+    }
+    return true;
+  }
+  return false;
 }
 
 std::size_t System::cancel(std::span<const Id> fibre_ids)
 {
-  _expiry.clear();
-  std::size_t removed = cancel(_fibres, fibre_ids, _in_update, _expiry);
-  if (removed == fibre_ids.size())
+  std::size_t removed = cancel(_fibres, _expiry, fibre_ids);
+  if (_expiry.indices.size() < fibre_ids.size())
   {
-    return removed;
+    removed += cancel(_new_fibres, _expiry, fibre_ids);
   }
 
-  removed += cancel(_new_fibres, fibre_ids, false, _expiry);
-  return removed;
+  if (!_in_update)
   {
     cleanupFibres(_expiry);
   }
+
+  return removed;
 }
 
 void System::cancelAll()
@@ -78,12 +86,12 @@ void System::update(const double epoch_time_s)
   OnExit on_exit([this]() { _in_update = false; });
 
   _expiry.clear();
-  for (auto &&fibre : _fibres)
+  for (std::size_t idx = 0; auto &&fibre : _fibres)
   {
     // Check for resumption
     if (fibre.cancel || fibre.fibre.resume(epoch_time_s) == Resume::Expire) [[unlikely]]
     {
-      _expiry.indices.push_back(*_current_update_idx);
+      _expiry.indices.push_back(idx);
     }
   }
 
@@ -98,36 +106,28 @@ void System::update(const double epoch_time_s)
   }
 }
 
-bool System::cancel(std::vector<FibreEntry> &fibres, const Id fibre_id,
-                    const bool defer_cleanup) const
+bool System::cancel(std::vector<FibreEntry> &fibres, Expiry &expiry, const Id fibre_id) const
 {
-  for (std::size_t i = 0; i < _fibres.size(); ++i)
+  for (std::size_t i = 0; i < fibres.size(); ++i)
   {
-    auto &fibre = _fibres.at(i);
+    auto &fibre = fibres.at(i);
     if (fibre.id == fibre_id)
     {
       fibre.cancel = true;
-      if (!defer_cleanup)
-      {
-        handleCancellation(i, fibre);
-      }
-      else
-      {
-        _expiry.indices.emplace_back(i);
-      }
+      expiry.indices.emplace_back(i);
       return true;
     }
   }
   return false;
 }
 
-std::size_t System::cancel(std::vector<FibreEntry> &fibres, std::span<const Id> fibre_ids,
-                           bool defer_cleanup, Expiry &expiry) const
+std::size_t System::cancel(std::vector<FibreEntry> &fibres, Expiry &expiry,
+                           std::span<const Id> fibre_ids) const
 {
   std::size_t removed = 0;
-  for (std::size_t i = 0; i < _fibres.size(); ++i)
+  for (std::size_t i = 0; i < fibres.size(); ++i)
   {
-    auto &fibre = _fibres.at(i);
+    auto &fibre = fibres.at(i);
     if (std::ranges::find(fibre_ids, fibre.id) != fibre_ids.end())
     {
       fibre.cancel = true;
@@ -136,30 +136,7 @@ std::size_t System::cancel(std::vector<FibreEntry> &fibres, std::span<const Id> 
     }
   }
 
-  if (!defer_cleanup)
-  {
-    cleanupFibres(expiry);
-  }
   return removed;
-}
-
-void System::handleCancellation(const std::size_t idx, FibreEntry &fibre)
-{
-  // Mark for cancellation. This is enough if we haven't updated this
-  // fibre in an ongoing update().
-  fibre.cancel = true;
-  // If not in an update or if the cancelled fibre has already been updated
-  // this cycle.
-  if (!_current_update_idx || idx < *_current_update_idx)
-  {
-    // Add to expiry for later cleanup.
-    _expiry.indices.emplace_back(idx);
-    if (!_current_update_idx)
-    {
-      // Cleanup if not currently updating.
-      cleanupFibres(_expiry);
-    }
-  }
 }
 
 void System::cleanupFibres(Expiry &expiry)

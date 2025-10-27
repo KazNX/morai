@@ -4,7 +4,7 @@ import std;
 
 import :common;
 import :fibre;
-import :yield;
+import :resumption;
 
 export namespace fibre
 {
@@ -115,10 +115,9 @@ private:
     }
   };
 
-  bool cancel(std::vector<FibreEntry> &fibres, Id fibre_id, bool defer_cleanup) const;
-  std::size_t cancel(std::vector<FibreEntry> &fibres, std::span<const Id> fibre_ids,
-                     bool defer_cleanup, Expiry &expiry) const;
-  void handleCancellation(const std::size_t idx, FibreEntry &fibre);
+  bool cancel(std::vector<FibreEntry> &fibres, Expiry &expiry, Id fibre_id) const;
+  std::size_t cancel(std::vector<FibreEntry> &fibres, Expiry &expiry,
+                     std::span<const Id> fibre_ids) const;
   void cleanupFibres(Expiry &expiry);
 
   std::vector<FibreEntry> _fibres{};
@@ -127,6 +126,5 @@ private:
   Id _next_id = 0u;
   Expiry _expiry{};
   bool _in_update = false;
-  std::optional<std::size_t> _current_update_idx = {};
 };
 }  // namespace fibre

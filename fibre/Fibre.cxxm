@@ -109,6 +109,7 @@ public:
     : _handle{ std::exchange(other._handle, {}) }
   {}
   Fibre &operator=(const Fibre &) = delete;
+  Fibre &operator=(Fibre &&) = default;
   ~Fibre();
 
   /// Check if the fibre has completed execution.
