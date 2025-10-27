@@ -9,7 +9,7 @@ Fibre ticker()
   for (int i = 0; i < 5; ++i)
   {
     std::cout << "Tick " << i << '\n';
-    co_yield yield();
+    co_yield {};
   }
   std::cout << "Tick done\n";
 }
@@ -31,19 +31,29 @@ TEST(Fibre, ticker)
   EXPECT_FALSE(system.isRunning(fibre_id));
 }
 
-Fibre cancellation()
+Fibre cancellation(bool *cleaned_up)
 {
   struct AtExit
   {
-    ~AtExit() { std::cout << "Cancelled!\n"; }
+    bool *cleaned_up = nullptr;
+    AtExit(bool *cleaned_up)
+      : cleaned_up(cleaned_up)
+    {}
+    ~AtExit()
+    {
+      if (cleaned_up)
+      {
+        *cleaned_up = true;
+      }
+    }
   };
 
-  AtExit at_exit;
+  AtExit at_exit(cleaned_up);
 
   for (int i = 0;; ++i)
   {
     std::cout << "Tick " << i << '\n';
-    co_yield yield();
+    co_yield {};
   }
   std::cout << "Tick done\n";
 }
@@ -51,7 +61,8 @@ Fibre cancellation()
 TEST(Fibre, cancellation)
 {
   System system;
-  Id fibre_id = system.start(cancellation());
+  bool cleaned_up = false;
+  Id fibre_id = system.start(cancellation(&cleaned_up));
 
   const double dt = 0.1;
   double simulated_time_s = 0;

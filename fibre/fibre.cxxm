@@ -2,32 +2,101 @@ export module fibre:fibre;
 
 import std;
 
-import :yield;
+import :resumption;
 
 export namespace fibre
 {
+/// The @c Fibre implements a coroutine interface for the fibre system. It tracks the current fibre
+/// state and supports resuming.
+///
+/// The fibre interface supports the following coroutine suspension mechanisms:
+///
+/// - `co_yield {};` - resume next update.
+/// - `co_yield <double>;` - resume after the specified number of seconds.
+/// - `co_await sleep(duration_s);` - resume after duration_s seconds.
+/// - `co_await std::chrono::duration{x}` - resume after the specified duration.
+/// - `co_await wait(condition);` - resume when condition() returns true.
+/// - `co_await []() -> bool { ... };` - resume when the lambda returns true.
+/// - `co_await wait(condition, timeout_s);` - resume when condition() returns true or after
+///   timeout_s seconds.
+/// - `co_return;` - end fibre execution.
 export class Fibre
 {
 public:
+  struct promise_type;
+
+  /// Implements the awaitable interface for fibre coroutines.
+  struct Awaitable
+  {
+    /// Transient storage for resumption condition. Propagated to the promise on suspension.
+    Resumption resumption;
+    /// Check if the fibre can immediately continue (true) or fibre needs to suspend (false).
+    bool await_ready() const { return resumption.condition && resumption.condition(); }
+    /// Suspend the fibre, migrating the @c resumption condition to the promise.
+    void await_suspend(std::coroutine_handle<promise_type> handle) noexcept;
+    /// Resumption handling - no-op.
+    void await_resume() noexcept {}
+  };
+
+  /// Fibre @c promise_type implementation.
   struct promise_type
   {
-    Yield value{};
-    std::exception_ptr exception{};
+    /// Indicates when next to resume the fibre - see @c Resumption. Note the time value is
+    /// initially given as a relative time, but stored as an epoch time.
+    Resumption resumption{};
+    std::exception_ptr exception{};  ///< Exception storage.
 
+    /// Convert to the owning @c Fibre object.
     Fibre get_return_object() noexcept
     {
       return Fibre{ std::coroutine_handle<promise_type>::from_promise(*this) };
     }
 
+    /// Initial suspension - always.
     std::suspend_always initial_suspend() noexcept { return {}; }
+    /// Final suspension - always.
     std::suspend_always final_suspend() noexcept { return {}; }
+    /// Exception handling - store to be rethrown on @c Fibre::resume().
     void unhandled_exception() noexcept { exception = std::current_exception(); }
 
+    /// Return type definition - void.
     void return_void() noexcept {}
-    std::suspend_always yield_value(const Yield &value) noexcept
+
+    /// Yield type definition - @c Resumption.
+    /// @param value Immediately stored into the @c resumption member (time still relative).
+    std::suspend_always yield_value(const Resumption &value) noexcept
     {
-      this->value = value;
+      resumption = value;
       return {};
+    }
+
+    /// @c co_await handling for @c double sleep durations.
+    /// @param duration_s The time to sleep (seconds).
+    Awaitable await_transform(const double duration_s) noexcept
+    {
+      return { .resumption = sleep(duration_s) };
+    }
+
+    /// @c co_await handling for std::chrono::duration sleep durations.
+    /// @param duration The duration to sleep for.
+    template <typename T>
+    Awaitable await_transform(std::chrono::duration<T> duration) noexcept
+    {
+      return { .resumption = sleep(duration) };
+    }
+    /// General @c co_await handling for @c Resumption types. Handles @c sleep(), @c wait() or
+    /// @c resumption().
+    /// @param resumption The the resumption condition.
+    Awaitable await_transform(const Resumption &resumption) noexcept
+    {
+      return { .resumption = resumption };
+    }
+    /// @c co_await handling for @c WaitCondition callbacks. This includes lambda expression
+    /// handling.
+    /// @param condition The callable wait condition. Resume when it returns @c true.
+    Awaitable await_transform(WaitCondition condition) noexcept
+    {
+      return { .resumption = wait(condition) };
     }
   };
 
@@ -39,13 +108,33 @@ public:
   Fibre(Fibre &&other) noexcept
     : _handle{ std::exchange(other._handle, {}) }
   {}
-
   Fibre &operator=(const Fibre &) = delete;
-
   ~Fibre();
 
-  [[nodiscard]] bool done() const noexcept { return _handle.done(); }
-  [[nodiscard]] Yield resume() noexcept;
+  /// Check if the fibre has completed execution.
+  [[nodiscard]] bool done() const noexcept { return !_handle || _handle.done(); }
+
+  /// Attempt to resume fibre execution.
+  ///
+  /// This returns control to the fibre coroutine so long as the @c promise_type::resumption
+  /// conditions are met. There are two conditions which may be met:
+  ///
+  /// - @p epoch_time_s is greater than or equal to @c Resumption::time_s and there is no
+  ///   @c Resumption::condition.
+  /// - There is a @c Resumption::condition and it has been met (returns @c true ), or the condition
+  ///   returns @c false, the @c Resumption::time_s is greater than zero and the @p epoch_time_s is
+  ///   greater than or equal to @c Resumption::time_s.
+  ///
+  /// Resuming the coroutine sets a new @p promise_time::resumption value via either a @c co_yield
+  /// or
+  /// @c co_await. This new @c Resumption has a relative @c time_s value, which is converted to an
+  /// epoch time before returning. No @c Resumption object is given when the fibre completes  -
+  /// @c co_return.
+  ///
+  /// @param epoch_time_s The current epoch time in seconds as given to @c System::update().
+  /// @return The new fibre state, which tells the @c System what to do with next with this
+  /// @c Fibre.
+  [[nodiscard]] Resume resume(const double epoch_time_s) noexcept;
 
 private:
   std::coroutine_handle<promise_type> _handle;

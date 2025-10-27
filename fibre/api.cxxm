@@ -2,5 +2,5 @@ export module fibre;
 
 export import :common;
 export import :fibre;
+export import :resumption;
 export import :system;
-export import :yield;

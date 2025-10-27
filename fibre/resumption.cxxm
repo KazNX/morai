@@ -1,0 +1,130 @@
+export module fibre:resumption;
+
+import std;
+
+import :common;
+
+export namespace fibre
+{
+/// Return values for @c Fibre::resume(), indicating the new state of the fibre.
+enum class Resume : std::int8_t
+{
+  Continue,  ///< Fibre continued running come code.
+  Sleep,     ///< Fibre is sleeping or waiting.
+  Expire     ///< Fibre has expired and requires cleanup.
+};
+
+/// This object tells the fibre system how or when to resume a fibre.
+///
+/// This object may be used with @c co_yield or @c co_await statements, however
+/// the preferred practice is to use @c yield(), @c sleep(), @c wait() functions
+/// or to use other supported @c co_await expressions - see @c System.
+export struct Resumption
+{
+  /// Resumption time value. When set, this is specified as a relative time value. Internally this
+  /// value is converted into an absolute epoch time.
+  double time_s = 0;
+  /// Optional condition to wait on before resuming.
+  WaitCondition condition = {};
+};
+
+/// A helper function for unqualified yield.
+///
+/// Example usage:
+///
+/// @code
+/// using namespace fibre;
+///
+/// Fibre fibre_entrypoint()
+/// {
+///   co_yield yield(); // Basic usage.
+///   co_yield {};      // Equivalent to the above - preferred.
+///   co_await yield(); // Equivalent to above.
+/// }
+/// @endcode
+export Resumption yield()
+{
+  return Resumption{};
+}
+
+/// A helper function for specifying a sleep duration.
+///
+/// Note that there is no guarantee that a fibre will resume after exactly the specified duration.
+/// The granularity of the @c System::update() controls the minimum sleep duration.
+///
+/// Example usage:
+///
+/// @code
+/// using namespace fibre;
+///
+/// Fibre fibre_entrypoint()
+/// {
+///   co_await sleep(1.0);  // Preferred usage.
+///   co_yield sleep(1.0);  // Supported alternative usage.
+/// }
+/// @endcode
+///
+/// @param duration_s The sleep duration in seconds.
+export Resumption sleep(const double duration_s)
+{
+  return Resumption{ .time_s = duration_s };
+}
+
+/// A helper function for specifying a sleep duration using a chrono duration.
+///
+/// Example usage:
+///
+/// @code
+/// using namespace fibre;
+///
+/// Fibre fibre_entrypoint()
+/// {
+///   co_await sleep(std::chrono::millisconds(1000));
+///   using namespace std::chrono_literals;
+///   co_await sleep(1000ms);
+///   co_yield sleep(1000ms); // Supported alternative usage.
+/// }
+/// @endcode
+///
+/// @param duration The sleep duration.
+export template <typename Rep, typename Period>
+Resumption sleep(const typename std::chrono::duration<Rep, Period> &duration)
+{
+  return { .time_s = std::chrono::duration<double>(duration).count() };
+}
+
+/// A helper function for specifying a wait condition with optional timeout.
+///
+/// The fibre will resume after @c condition returns true, or after the timeout has expired (if
+/// set. Note that the fibre may resume with @c condition reporting @c false when a timeout is
+/// specified. There is no other way to check if the timeout expired or the condition was met.
+///
+/// Example usage:
+///
+/// @code
+/// using namespace fibre;
+///
+/// Fibre fibre_entrypoint(bool* condition_met)
+/// {
+///   // Preferred usage:
+///   co_await wait([condition_met]() { return *condition_met; }, 15.0);
+///   // Alternative, supported usage:
+///   co_yield wait([condition_met]() { return *condition_met; }, 15.0);
+/// }
+/// @endcode
+///
+/// @param duration The sleep duration.
+export Resumption wait(WaitCondition condition, const double timeout_s = 0)
+{
+  return Resumption{ .time_s = timeout_s, .condition = std::move(condition) };
+}
+
+/// @overload
+export template <typename Rep, typename Period>
+Resumption wait(WaitCondition condition,
+                const typename std::chrono::duration<Rep, Period> &timeout_duration)
+{
+  return Resumption{ .time_s = std::chrono::duration<double>(timeout_duration).count(),
+                     .condition = std::move(condition) };
+}
+}  // namespace fibre

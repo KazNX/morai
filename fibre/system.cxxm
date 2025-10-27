@@ -8,15 +8,83 @@ import :yield;
 
 export namespace fibre
 {
+/// Implements a fibre management and update system for fibres - sometimes known as microthreads.
+///
+/// The fibre @c System implements cooperative multitasking in a single thread. Fibres are written
+/// as C++20 coroutines. There are two requirements for implementing a fibre entrypoint:
+///
+/// - The entry point function must have a @c fibre::Fibre return type.
+/// - The entry point function must be a C++ coroutine - i.e., use @c co_await, @c co_yield or
+///   @c co_return.
+///
+/// The fibre system supports starting fibres via @c start() and requires @c update() to be called
+/// in order to update all known fibres. The provided epoch time must be monotonically increasing,
+/// but is otherwise managed by the caller. The time is interpreted as seconds, though the actual
+/// rate may be varied by the called.
+///
+/// All fibres start initially suspended and remain suspended until the next @c update() call.
+/// Fibres *must* cede control regularly or starve the @c fibre::System thread as there is no
+/// pre-emption.
+///
+/// A fibre may cede control in any for the following ways (preferred usage is marked):
+///
+/// - `co_yield {};` - resume next update. (preferred)
+///   - `co_yield fibre::yield();` - resume next update (alias)
+///   - `co_await fibre::yield();` - supported alternative
+/// - `co_await <double>;` - resume after the specified number of seconds. (preferred)
+///   - `co_await std::chrono::duration...;` (alternative preferred)
+///   - `co_await fibre::sleep(duration_s);` - resume after duration_s seconds (alias)
+///   - `co_yield <sleep-expression>;` - supported alternative
+/// - `co_await fibre::wait(condition[, timeout]);` - resume when condition() returns true
+///   (preferred)
+///   - `co_await []() -> bool { ... };` - resume when the lambda returns true (alternative
+///     preferred)
+///   - `co_yield fibre::wait(condition[, timeout]);` - supported alternative
+/// - `co_return;` - end fibre execution. Implicit on reaching the end of the function.'
+///
+/// All @c co_await expressions will continue immediately if the condition is already met (not
+/// possible when awaiting a @c fibre::yield() ). Conversely, all @c co_yield expressions cede
+/// control even if the condition is already met.
+///
+/// Typical usage of the fibre system is as follows:
+///
+/// @code
+/// int main()
+/// {
+///   using namespace fibre;
+///   System fibres;        // Create the system
+///   startFibres(fibres);  // Start some fibres
+///   while (!fibres.empty())
+///   {
+///     const double epoch_time_s = getEpochTime(); // Get current time
+///     fibres.update(epoch_time_s);                // Update all fibres
+///     doOtherWork();                              // Do other work
+///   }
+///   return 0;
+/// }
+/// @endcode
+///
+/// Other notes:
+///
+/// - A @c fibre::System is not itself thread-safe.
+/// - Multiple fibre systems may exist both on the same thread or across multiple threads.
+/// - Fibres may not be moved between fibre systems.
+/// - @c gls::finally() patterns may be used to ensure some fibre cleanup code is always executed.
+/// - Fibres may start other fibres in the same @c System so long as they have access to the
+///   @c System. New fibres are updated on the *next* @c update() call.
+/// - Fibres may cancel other fibres in the same @c System. This prevents any further updates of the
+///   target fibre.
 export class System
 {
 public:
   System();
   ~System();
 
-  [[nodicard]] const Context &context() const noexcept { return _context; }
-
+  /// Returns true if there are no running fibres.
+  [[nodiscard]] bool empty() const noexcept { return _fibres.empty(); }
+  /// Returns the number of running fibres regardless of suspended state.
   [[nodiscard]] std::size_t runningCount() const noexcept { return _fibres.size(); }
+  /// Check if there is a fibre running with the given ID.
   [[nodiscard]] bool isRunning(Id fibre_id) const noexcept;
 
   Id start(Fibre &&fibre);
@@ -28,24 +96,17 @@ public:
   void update(double epoch_time_s);
 
 private:
-  struct FibreState
+  struct FibreEntry
   {
     Id id = InvalidFibre;
     Fibre fibre;
-    Yield resume = {};
-
-    [[nodiscard]] bool should_resume(const double epoch_time_s) const
-    {
-      const bool timeout_reached = resume.time_s <= epoch_time_s;
-      const bool condition_met = (resume.condition) ? resume.condition() : false;
-      return timeout_reached || condition_met;
-    }
+    bool cancel = false;
   };
 
   struct Expiry
   {
     std::vector<std::size_t> indices;
-    std::vector<FibreState> fibres;
+    std::vector<FibreEntry> fibres;
 
     void clear()
     {
@@ -54,11 +115,18 @@ private:
     }
   };
 
+  bool cancel(std::vector<FibreEntry> &fibres, Id fibre_id, bool defer_cleanup) const;
+  std::size_t cancel(std::vector<FibreEntry> &fibres, std::span<const Id> fibre_ids,
+                     bool defer_cleanup, Expiry &expiry) const;
+  void handleCancellation(const std::size_t idx, FibreEntry &fibre);
   void cleanupFibres(Expiry &expiry);
 
-  std::vector<FibreState> _fibres{};
+  std::vector<FibreEntry> _fibres{};
+  /// Fibres added during an update. Migrated at the end of the update.
+  std::vector<FibreEntry> _new_fibres{};
   Id _next_id = 0u;
-  Context _context{};
   Expiry _expiry{};
+  bool _in_update = false;
+  std::optional<std::size_t> _current_update_idx = {};
 };
 }  // namespace fibre

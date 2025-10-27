@@ -5,8 +5,8 @@ target_sources(fibre
     api.cxxm
     common.cxxm
     fibre.cxxm
+    resumption.cxxm
     system.cxxm
-    yield.cxxm
 PRIVATE
     fibre.cxx
     system.cxx
