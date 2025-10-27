@@ -1,5 +1,5 @@
 add_executable(fibre_tests
-  fibre_tests.cpp
+  FibreTests.cpp
 )
 
 target_link_libraries(fibre_tests

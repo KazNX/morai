@@ -2,14 +2,14 @@ add_library(fibre)
 target_sources(fibre
   PUBLIC
     FILE_SET fibre_modules TYPE CXX_MODULES FILES
-    api.cxxm
-    common.cxxm
-    fibre.cxxm
-    resumption.cxxm
-    system.cxxm
+    Api.cxxm
+    Common.cxxm
+    Fibre.cxxm
+    Resumption.cxxm
+    System.cxxm
 PRIVATE
-    fibre.cxx
-    system.cxx
+    Fibre.cxx
+    System.cxx
 )
 
 # target_sources(fibre 
