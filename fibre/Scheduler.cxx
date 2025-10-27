@@ -22,10 +22,10 @@ struct OnExit
 };
 }  // namespace
 
-System::System() = default;
-System::~System() = default;
+Scheduler::Scheduler() = default;
+Scheduler::~Scheduler() = default;
 
-bool System::isRunning(const Id fibre_id) const noexcept
+bool Scheduler::isRunning(const Id fibre_id) const noexcept
 {
   return std::ranges::find_if(
            _fibres, [fibre_id](const FibreEntry &state) { return state.id == fibre_id; }) !=
@@ -35,7 +35,7 @@ bool System::isRunning(const Id fibre_id) const noexcept
          }) != _new_fibres.end();
 }
 
-Id System::start(Fibre &&fibre)
+Id Scheduler::start(Fibre &&fibre)
 {
   const Id fibre_id = _next_id;
   // Increment by 2 so overflow skips InvalidFibre. Unlikely, but you never know
@@ -45,7 +45,7 @@ Id System::start(Fibre &&fibre)
   return fibre_id;
 }
 
-bool System::cancel(const Id fibre_id)
+bool Scheduler::cancel(const Id fibre_id)
 {
   if (cancel(_fibres, _expiry, fibre_id) || cancel(_new_fibres, _expiry, fibre_id))
   {
@@ -58,7 +58,7 @@ bool System::cancel(const Id fibre_id)
   return false;
 }
 
-std::size_t System::cancel(std::span<const Id> fibre_ids)
+std::size_t Scheduler::cancel(std::span<const Id> fibre_ids)
 {
   std::size_t removed = cancel(_fibres, _expiry, fibre_ids);
   if (_expiry.indices.size() < fibre_ids.size())
@@ -74,12 +74,12 @@ std::size_t System::cancel(std::span<const Id> fibre_ids)
   return removed;
 }
 
-void System::cancelAll()
+void Scheduler::cancelAll()
 {
   _fibres.clear();
 }
 
-void System::update(const double epoch_time_s)
+void Scheduler::update(const double epoch_time_s)
 {
   // Mark update and setup to clear on leaving scope.
   _in_update = true;
@@ -106,7 +106,7 @@ void System::update(const double epoch_time_s)
   }
 }
 
-bool System::cancel(std::vector<FibreEntry> &fibres, Expiry &expiry, const Id fibre_id) const
+bool Scheduler::cancel(std::vector<FibreEntry> &fibres, Expiry &expiry, const Id fibre_id) const
 {
   for (std::size_t i = 0; i < fibres.size(); ++i)
   {
@@ -121,8 +121,8 @@ bool System::cancel(std::vector<FibreEntry> &fibres, Expiry &expiry, const Id fi
   return false;
 }
 
-std::size_t System::cancel(std::vector<FibreEntry> &fibres, Expiry &expiry,
-                           std::span<const Id> fibre_ids) const
+std::size_t Scheduler::cancel(std::vector<FibreEntry> &fibres, Expiry &expiry,
+                              std::span<const Id> fibre_ids) const
 {
   std::size_t removed = 0;
   for (std::size_t i = 0; i < fibres.size(); ++i)
@@ -139,7 +139,7 @@ std::size_t System::cancel(std::vector<FibreEntry> &fibres, Expiry &expiry,
   return removed;
 }
 
-void System::cleanupFibres(Expiry &expiry)
+void Scheduler::cleanupFibres(Expiry &expiry)
 {
   if (expiry.indices.empty())
   {

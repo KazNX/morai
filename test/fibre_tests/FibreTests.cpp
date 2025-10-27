@@ -16,19 +16,19 @@ Fibre ticker()
 
 TEST(Fibre, ticker)
 {
-  System system;
-  Id fibre_id = system.start(ticker());
+  Scheduler scheduler;
+  Id fibre_id = scheduler.start(ticker());
 
   const double dt = 0.1;
   double simulated_time_s = 0;
-  EXPECT_TRUE(system.isRunning(fibre_id));
-  while (system.isRunning(fibre_id))
+  EXPECT_TRUE(scheduler.isRunning(fibre_id));
+  while (scheduler.isRunning(fibre_id))
   {
-    system.update(simulated_time_s);
+    scheduler.update(simulated_time_s);
     simulated_time_s += dt;
   }
 
-  EXPECT_FALSE(system.isRunning(fibre_id));
+  EXPECT_FALSE(scheduler.isRunning(fibre_id));
 }
 
 Fibre cancellation(bool *cleaned_up)
@@ -60,21 +60,21 @@ Fibre cancellation(bool *cleaned_up)
 
 TEST(Fibre, cancellation)
 {
-  System system;
+  Scheduler scheduler;
   bool cleaned_up = false;
-  Id fibre_id = system.start(cancellation(&cleaned_up));
+  Id fibre_id = scheduler.start(cancellation(&cleaned_up));
 
   const double dt = 0.1;
   double simulated_time_s = 0;
-  EXPECT_TRUE(system.isRunning(fibre_id));
+  EXPECT_TRUE(scheduler.isRunning(fibre_id));
   for (int i = 0; i < 5; ++i)
   {
-    system.update(simulated_time_s);
+    scheduler.update(simulated_time_s);
     simulated_time_s += dt;
   }
 
-  system.cancel(fibre_id);
-  EXPECT_FALSE(system.isRunning(fibre_id));
+  scheduler.cancel(fibre_id);
+  EXPECT_FALSE(scheduler.isRunning(fibre_id));
 }
 
 }  // namespace fibre

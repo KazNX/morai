@@ -6,10 +6,10 @@ target_sources(fibre
     Common.cxxm
     Fibre.cxxm
     Resumption.cxxm
-    System.cxxm
+    Scheduler.cxxm
 PRIVATE
     Fibre.cxx
-    System.cxx
+    Scheduler.cxx
 )
 
 # target_sources(fibre 

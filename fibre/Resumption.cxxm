@@ -14,11 +14,11 @@ enum class Resume : std::int8_t
   Expire     ///< Fibre has expired and requires cleanup.
 };
 
-/// This object tells the fibre system how or when to resume a fibre.
+/// This object tells the scheduler how or when to resume a fibre.
 ///
 /// This object may be used with @c co_yield or @c co_await statements, however
 /// the preferred practice is to use @c yield(), @c sleep(), @c wait() functions
-/// or to use other supported @c co_await expressions - see @c System.
+/// or to use other supported @c co_await expressions - see @c Scheduler.
 export struct Resumption
 {
   /// Resumption time value. When set, this is specified as a relative time value. Internally this
@@ -50,7 +50,7 @@ export Resumption yield()
 /// A helper function for specifying a sleep duration.
 ///
 /// Note that there is no guarantee that a fibre will resume after exactly the specified duration.
-/// The granularity of the @c System::update() controls the minimum sleep duration.
+/// The granularity of the @c Scheduler::update() controls the minimum sleep duration.
 ///
 /// Example usage:
 ///

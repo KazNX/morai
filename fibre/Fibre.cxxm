@@ -132,8 +132,8 @@ public:
   /// epoch time before returning. No @c Resumption object is given when the fibre completes  -
   /// @c co_return.
   ///
-  /// @param epoch_time_s The current epoch time in seconds as given to @c System::update().
-  /// @return The new fibre state, which tells the @c System what to do with next with this
+  /// @param epoch_time_s The current epoch time in seconds as given to @c Scheduler::update().
+  /// @return The new fibre state, which tells the @c Scheduler what to do with next with this
   /// @c Fibre.
   [[nodiscard]] Resume resume(const double epoch_time_s) noexcept;
 

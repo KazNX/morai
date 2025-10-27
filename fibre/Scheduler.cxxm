@@ -1,4 +1,4 @@
-export module fibre:system;
+export module fibre:scheduler;
 
 import std;
 
@@ -8,22 +8,22 @@ import :resumption;
 
 export namespace fibre
 {
-/// Implements a fibre management and update system for fibres - sometimes known as microthreads.
+/// Implements a fibre management and update scheduler for fibres - sometimes known as microthreads.
 ///
-/// The fibre @c System implements cooperative multitasking in a single thread. Fibres are written
-/// as C++20 coroutines. There are two requirements for implementing a fibre entrypoint:
+/// The fibre @c Scheduler implements cooperative multitasking in a single thread. Fibres are
+/// written as C++20 coroutines. There are two requirements for implementing a fibre entrypoint:
 ///
 /// - The entry point function must have a @c fibre::Fibre return type.
 /// - The entry point function must be a C++ coroutine - i.e., use @c co_await, @c co_yield or
 ///   @c co_return.
 ///
-/// The fibre system supports starting fibres via @c start() and requires @c update() to be called
+/// The scheduler supports starting fibres via @c start() and requires @c update() to be called
 /// in order to update all known fibres. The provided epoch time must be monotonically increasing,
 /// but is otherwise managed by the caller. The time is interpreted as seconds, though the actual
 /// rate may be varied by the called.
 ///
 /// All fibres start initially suspended and remain suspended until the next @c update() call.
-/// Fibres *must* cede control regularly or starve the @c fibre::System thread as there is no
+/// Fibres *must* cede control regularly or starve the @c fibre::Scheduler thread as there is no
 /// pre-emption.
 ///
 /// A fibre may cede control in any for the following ways (preferred usage is marked):
@@ -46,13 +46,13 @@ export namespace fibre
 /// possible when awaiting a @c fibre::yield() ). Conversely, all @c co_yield expressions cede
 /// control even if the condition is already met.
 ///
-/// Typical usage of the fibre system is as follows:
+/// Typical usage of the scheduler is as follows:
 ///
 /// @code
 /// int main()
 /// {
 ///   using namespace fibre;
-///   System fibres;        // Create the system
+///   Scheduler fibres;     // Create the scheduler
 ///   startFibres(fibres);  // Start some fibres
 ///   while (!fibres.empty())
 ///   {
@@ -66,19 +66,20 @@ export namespace fibre
 ///
 /// Other notes:
 ///
-/// - A @c fibre::System is not itself thread-safe.
+/// - A @c fibre::Scheduler is not itself thread-safe.
 /// - Multiple fibre systems may exist both on the same thread or across multiple threads.
 /// - Fibres may not be moved between fibre systems.
 /// - @c gls::finally() patterns may be used to ensure some fibre cleanup code is always executed.
-/// - Fibres may start other fibres in the same @c System so long as they have access to the
-///   @c System. New fibres are updated on the *next* @c update() call.
-/// - Fibres may cancel other fibres in the same @c System. This prevents any further updates of the
+/// - Fibres may start other fibres in the same @c Scheduler so long as they have access to the
+///   @c Scheduler. New fibres are updated on the *next* @c update() call.
+/// - Fibres may cancel other fibres in the same @c Scheduler. This prevents any further updates of
+/// the
 ///   target fibre.
-export class System
+export class Scheduler
 {
 public:
-  System();
-  ~System();
+  Scheduler();
+  ~Scheduler();
 
   /// Returns true if there are no running fibres.
   [[nodiscard]] bool empty() const noexcept { return _fibres.empty(); }
