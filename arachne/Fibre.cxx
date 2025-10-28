@@ -21,7 +21,7 @@ Fibre::~Fibre()
 [[nodiscard]] Resume Fibre::resume(const double epoch_time_s) noexcept
 {
   auto &promise = _handle.promise();
-  const Resumption resumption = std::exchange(promise.resumption, {});
+  const Resumption &resumption = promise.resumption;
   if (done())
   {
     return Resume::Expire;
@@ -40,6 +40,7 @@ Fibre::~Fibre()
   }
 
   // Resume will set promise.value again so long as we haven't expired.
+  promise.resumption = {};
   _handle.resume();
   if (_handle.promise().exception)
   {

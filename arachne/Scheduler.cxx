@@ -73,6 +73,7 @@ void Scheduler::update(const double epoch_time_s)
     {
       _expiry.indices.push_back(idx);
     }
+    ++idx;
   }
 
   cleanupFibres(_expiry);
