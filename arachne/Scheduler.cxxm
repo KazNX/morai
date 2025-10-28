@@ -92,6 +92,15 @@ public:
   bool cancel(Id fibre_id);
   std::size_t cancel(std::span<const Id> fibre_ids);
 
+  /// Generate a wait condition to wait until the specified fibre is no longer
+  /// running.
+  /// @param fibre_id The fibre ID to wait for.
+  /// @return The wait condition. Can be used with @c co_await in a fibre.
+  WaitCondition await(const Id fibre_id) const noexcept
+  {
+    return [this, fibre_id]() -> bool { return !isRunning(fibre_id); };
+  }
+
   void cancelAll();
 
   void update(double epoch_time_s);

@@ -79,8 +79,8 @@ public:
 
     /// @c co_await handling for std::chrono::duration sleep durations.
     /// @param duration The duration to sleep for.
-    template <typename T>
-    Awaitable await_transform(std::chrono::duration<T> duration) noexcept
+    template <typename Rep, typename Period>
+    Awaitable await_transform(const typename std::chrono::duration<Rep, Period> &duration) noexcept
     {
       return { .resumption = sleep(duration) };
     }
