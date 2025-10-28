@@ -12,7 +12,7 @@ set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD
   "0e5b6991-d74f-4b3d-a41c-cf096e0b2508")
 
   # Setup project details.
-project(fibre LANGUAGES CXX)
+project(arachne LANGUAGES CXX)
 
 # C++ standards setup.
 if(NOT CMAKE_CXX_STANDARD)
@@ -30,11 +30,11 @@ include(tools)
 # Add project level options here.
 option(FIBRE_BUILD_TESTS "Build unit tests?" ON)
 
-set(ConfigPackageLocation lib/cmake/fibre)
+set(ConfigPackageLocation lib/cmake/arachne)
 
 # Ensure debug libraries are built with different named to release builds. This is to address issues such as MSVC
 # having different debug and release runtime libraries. For a well setup API, one which hides resource allocation and
-# ensures symmetrical deallcation occurs from the same allocator, this won't be a problem, but the consistency is
+# ensures symmetrical deallocation occurs from the same allocator, this won't be a problem, but the consistency is
 # useful.
 ensure_set(CMAKE_DEBUG_POSTFIX "_d")
 # Marshall all binaries to the same directory. This is expecially useful on Windows when trying to run exectuables from
@@ -45,12 +45,19 @@ ensure_set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY, "${CMAKE_BINARY_DIR}/lib")
 ensure_set(CMAKE_COMPILE_PDB_OUTPUT_DIRECTORY, "${CMAKE_BINARY_DIR}/bin")
 ensure_set(CMAKE_LIBRARY_OUTPUT_DIRECTORY, "${CMAKE_BINARY_DIR}/$<IF:$<PLATFORM_ID:Windows,WindowsCE,WindowsStore>,bin,lib>")
 
+foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
+  ensure_set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/${CONFIG}")
+  ensure_set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY, "${CMAKE_BINARY_DIR}/lib/${CONFIG}")
+  ensure_set(CMAKE_COMPILE_PDB_OUTPUT_DIRECTORY, "${CMAKE_BINARY_DIR}/bin/${CONFIG}")
+  ensure_set(CMAKE_LIBRARY_OUTPUT_DIRECTORY, "${CMAKE_BINARY_DIR}/$<IF:$<PLATFORM_ID:Windows,WindowsCE,WindowsStore>,bin,lib>/${CONFIG}")
+endforeach()
+
 # Allow the use of folders to group targets in supporting environments.
 # For example Visual Studio solution folders.
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Include sub projects.
-add_subdirectory(fibre)
+add_subdirectory(arachne)
 
 if(FIBRE_BUILD_TESTS)
   # We can enable testing here and/or in the subdirectory, but doing it here allows us to run CTest from the build root.

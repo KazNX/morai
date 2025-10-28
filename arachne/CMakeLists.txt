@@ -1,5 +1,5 @@
-add_library(fibre)
-target_sources(fibre
+add_library(arachne)
+target_sources(arachne
   PUBLIC
     FILE_SET fibre_modules TYPE CXX_MODULES FILES
     Api.cxxm
@@ -12,20 +12,17 @@ PRIVATE
     Scheduler.cxx
 )
 
-# target_sources(fibre 
-# )
-
-set_target_properties(fibre PROPERTIES
+set_target_properties(arachne PROPERTIES
   CXX_MODULE_STD 1
   CXX_SCAN_FOR_MODULES ON
 )
 
-target_compile_features(fibre
+target_compile_features(arachne
   PRIVATE cxx_std_23
   INTERFACE cxx_std_20
 )
 
-target_compile_options(fibre
+target_compile_options(arachne
   PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/experimental:module>
 )
