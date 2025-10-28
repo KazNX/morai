@@ -1,8 +1,8 @@
-import fibre;
+import arachne;
 
 #include <gtest/gtest.h>
 
-namespace fibre
+namespace arachne
 {
 Fibre ticker()
 {
@@ -77,4 +77,4 @@ TEST(Fibre, cancellation)
   EXPECT_FALSE(scheduler.isRunning(fibre_id));
 }
 
-}  // namespace fibre
+}  // namespace arachne

@@ -1,4 +1,4 @@
-export module fibre:scheduler;
+export module arachne:scheduler;
 
 import std;
 
@@ -6,7 +6,7 @@ import :common;
 import :fibre;
 import :resumption;
 
-export namespace fibre
+export namespace arachne
 {
 /// Implements a fibre management and update scheduler for fibres - sometimes known as microthreads.
 ///
@@ -51,7 +51,7 @@ export namespace fibre
 /// @code
 /// int main()
 /// {
-///   using namespace fibre;
+///   using namespace arachne;
 ///   Scheduler fibres;     // Create the scheduler
 ///   startFibres(fibres);  // Start some fibres
 ///   while (!fibres.empty())
@@ -128,4 +128,4 @@ private:
   Expiry _expiry{};
   bool _in_update = false;
 };
-}  // namespace fibre
+}  // namespace arachne

@@ -1,10 +1,10 @@
-export module fibre:fibre;
+export module arachne:fibre;
 
 import std;
 
 import :resumption;
 
-export namespace fibre
+export namespace arachne
 {
 /// The @c Fibre implements a coroutine interface for the fibre system. It tracks the current fibre
 /// state and supports resuming.
@@ -140,4 +140,4 @@ public:
 private:
   std::coroutine_handle<promise_type> _handle;
 };
-}  // namespace fibre
+}  // namespace arachne

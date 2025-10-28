@@ -1,8 +1,8 @@
-module fibre;
+module arachne;
 
 import std;
 
-namespace fibre
+namespace arachne
 {
 
 void Fibre::Awaitable::await_suspend(std::coroutine_handle<promise_type> handle) noexcept
@@ -58,4 +58,4 @@ Fibre::~Fibre()
   }
   return Resume::Continue;
 }
-}  // namespace fibre
+}  // namespace arachne

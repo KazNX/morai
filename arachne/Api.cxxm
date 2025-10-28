@@ -1,4 +1,4 @@
-export module fibre;
+export module arachne;
 
 export import :common;
 export import :fibre;

@@ -1,10 +1,10 @@
-export module fibre:common;
+export module arachne:common;
 
 import std;
 
-export namespace fibre
+export namespace arachne
 {
 export using Id = std::size_t;
 export using WaitCondition = std::function<bool()>;
 export constexpr Id InvalidFibre = ~static_cast<std::size_t>(0);
-}  // namespace fibre
+}  // namespace arachne

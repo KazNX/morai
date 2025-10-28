@@ -1,10 +1,10 @@
-export module fibre:resumption;
+export module arachne:resumption;
 
 import std;
 
 import :common;
 
-export namespace fibre
+export namespace arachne
 {
 /// Return values for @c Fibre::resume(), indicating the new state of the fibre.
 enum class Resume : std::int8_t
@@ -33,7 +33,7 @@ export struct Resumption
 /// Example usage:
 ///
 /// @code
-/// using namespace fibre;
+/// using namespace arachne;
 ///
 /// Fibre fibre_entrypoint()
 /// {
@@ -55,7 +55,7 @@ export Resumption yield()
 /// Example usage:
 ///
 /// @code
-/// using namespace fibre;
+/// using namespace arachne;
 ///
 /// Fibre fibre_entrypoint()
 /// {
@@ -75,7 +75,7 @@ export Resumption sleep(const double duration_s)
 /// Example usage:
 ///
 /// @code
-/// using namespace fibre;
+/// using namespace arachne;
 ///
 /// Fibre fibre_entrypoint()
 /// {
@@ -102,7 +102,7 @@ Resumption sleep(const typename std::chrono::duration<Rep, Period> &duration)
 /// Example usage:
 ///
 /// @code
-/// using namespace fibre;
+/// using namespace arachne;
 ///
 /// Fibre fibre_entrypoint(bool* condition_met)
 /// {
@@ -127,4 +127,4 @@ Resumption wait(WaitCondition condition,
   return Resumption{ .time_s = std::chrono::duration<double>(timeout_duration).count(),
                      .condition = std::move(condition) };
 }
-}  // namespace fibre
+}  // namespace arachne

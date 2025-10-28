@@ -1,6 +1,6 @@
-module fibre;
+module arachne;
 
-namespace fibre
+namespace arachne
 {
 namespace
 {
@@ -163,4 +163,4 @@ void Scheduler::cleanupFibres(Expiry &expiry)
   expiry.clear();
 }
 
-}  // namespace fibre
+}  // namespace arachne
