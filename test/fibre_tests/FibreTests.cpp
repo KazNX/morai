@@ -33,22 +33,12 @@ TEST(Fibre, ticker)
 
 Fibre cancellation(bool *cleaned_up)
 {
-  struct AtExit
-  {
-    bool *cleaned_up = nullptr;
-    AtExit(bool *cleaned_up)
-      : cleaned_up(cleaned_up)
-    {}
-    ~AtExit()
+  [[maybe_unused]] const auto at_exit = arachne::finally([&cleaned_up]() {
+    if (cleaned_up)
     {
-      if (cleaned_up)
-      {
-        *cleaned_up = true;
-      }
+      *cleaned_up = true;
     }
-  };
-
-  AtExit at_exit(cleaned_up);
+  });
 
   for (int i = 0;; ++i)
   {

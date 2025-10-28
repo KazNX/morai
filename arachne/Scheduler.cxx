@@ -2,26 +2,6 @@ module arachne;
 
 namespace arachne
 {
-namespace
-{
-struct OnExit
-{
-  std::function<void()> func;
-
-  OnExit(std::function<void()> func)
-    : func(std::move(func))
-  {}
-
-  ~OnExit()
-  {
-    if (func)
-    {
-      func();
-    }
-  }
-};
-}  // namespace
-
 Scheduler::Scheduler() = default;
 Scheduler::~Scheduler() = default;
 
@@ -83,7 +63,7 @@ void Scheduler::update(const double epoch_time_s)
 {
   // Mark update and setup to clear on leaving scope.
   _in_update = true;
-  OnExit on_exit([this]() { _in_update = false; });
+  [[maybe_unused]] const auto cleanup = finally([this]() { _in_update = false; });
 
   _expiry.clear();
   for (std::size_t idx = 0; auto &&fibre : _fibres)

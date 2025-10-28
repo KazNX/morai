@@ -2,5 +2,6 @@ export module arachne;
 
 export import :common;
 export import :fibre;
+export import :finally;
 export import :resumption;
 export import :scheduler;

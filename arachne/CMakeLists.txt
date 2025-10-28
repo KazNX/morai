@@ -5,6 +5,7 @@ target_sources(arachne
     Api.cxxm
     Common.cxxm
     Fibre.cxxm
+    Finally.cxxm
     Resumption.cxxm
     Scheduler.cxxm
 PRIVATE
