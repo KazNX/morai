@@ -1,6 +1,5 @@
-import arachne;
-
-import std;
+#include <arachne/Finally.hpp>
+#include <arachne/Scheduler.hpp>
 
 #include <gtest/gtest.h>
 

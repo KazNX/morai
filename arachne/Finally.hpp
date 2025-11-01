@@ -1,8 +1,8 @@
-export module arachne:finally;
+#pragma once
 
-import std;
+#include <utility>
 
-export namespace arachne
+namespace arachne
 {
 /// FinalAction allows you to ensure something gets run at the end of a scope
 ///

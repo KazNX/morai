@@ -1,8 +1,9 @@
-export module arachne:common;
+#pragma once
 
-import std;
+#include <cstddef>
+#include <functional>
 
-export namespace arachne
+namespace arachne
 {
 using Id = std::size_t;
 using WaitCondition = std::function<bool()>;

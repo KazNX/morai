@@ -1,10 +1,7 @@
-module arachne;
-
-import std;
+#include "Fibre.hpp"
 
 namespace arachne
 {
-
 void Fibre::Awaitable::await_suspend(std::coroutine_handle<promise_type> handle) noexcept
 {
   handle.promise().resumption = resumption;

@@ -1,33 +1,13 @@
 # Project setup and minimum cmake version.
-cmake_minimum_required(VERSION 3.30 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
-# For help with CMake & C++ 20 modules see: https://www.kitware.com/import-std-in-cmake-3-30/
-
-# Set experimental flag to enable `import std` support from CMake.
-# This must be enabled before C++ language support.
-# Consult CMake/Help/dev/experimental6.rst in the CMake source tree for the
-# correct value for your CMake version. Use the command line to set the
-# correct value.
-if(NOT DEFINED CMAKE_EXPERIMENTAL_CXX_IMPORT_STD)
-  if(CMAKE_VERSION VERSION_EQUAL "4.1.2")
-    set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "d0edc3af-4c50-42ea-a356-e2862fe7a444")
-  else()
-    set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "0e5b6991-d74f-4b3d-a41c-cf096e0b2508")
-  endif()
-endif()
-
-set(CMAKE_CXX_COMPILER_IMPORT_STD ON)
-
-# Setup project details.
 project(arachne LANGUAGES CXX)
 
 # C++ standards setup.
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 23)
+  set(CMAKE_CXX_STANDARD 20)
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-
-set(CMAKE_CXX_MODULE_STD 1)
 
 # Add cmake directory to the modules path.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")

@@ -1,10 +1,11 @@
-export module arachne:resumption;
+#pragma once
 
-import std;
+#include "Common.hpp"
 
-import :common;
+#include <cstdint>
+#include <chrono>
 
-export namespace arachne
+namespace arachne
 {
 /// Return values for @c Fibre::resume(), indicating the new state of the fibre.
 enum class Resume : std::int8_t

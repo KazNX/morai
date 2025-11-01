@@ -1,12 +1,12 @@
-export module arachne:scheduler;
+#pragma once
 
-import std;
+#include "Common.hpp"
+#include "Fibre.hpp"
 
-import :common;
-import :fibre;
-import :resumption;
+#include <span>
+#include <vector>
 
-export namespace arachne
+namespace arachne
 {
 /// Implements a fibre management and update scheduler for fibres - sometimes known as microthreads.
 ///
