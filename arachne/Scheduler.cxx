@@ -1,5 +1,7 @@
 module arachne;
 
+import std;
+
 namespace arachne
 {
 Scheduler::Scheduler() = default;

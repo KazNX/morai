@@ -20,7 +20,7 @@ export namespace arachne
 /// - `co_await wait(condition, timeout_s);` - resume when condition() returns true or after
 ///   timeout_s seconds.
 /// - `co_return;` - end fibre execution.
-export class Fibre
+class Fibre
 {
 public:
   struct promise_type;

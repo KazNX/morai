@@ -75,7 +75,7 @@ export namespace arachne
 /// - Fibres may cancel other fibres in the same @c Scheduler. This prevents any further updates of
 /// the
 ///   target fibre.
-export class Scheduler
+class Scheduler
 {
 public:
   Scheduler();

@@ -5,13 +5,20 @@ cmake_minimum_required(VERSION 3.30 FATAL_ERROR)
 
 # Set experimental flag to enable `import std` support from CMake.
 # This must be enabled before C++ language support.
-set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD
-  # This specific value changes as experimental support evolves. See
-  # `Help/dev/experimental.rst` in the CMake source corresponding to
-  # your CMake build for the exact value to use.
-  "0e5b6991-d74f-4b3d-a41c-cf096e0b2508")
+# Consult CMake/Help/dev/experimental6.rst in the CMake source tree for the
+# correct value for your CMake version. Use the command line to set the
+# correct value.
+if(NOT DEFINED CMAKE_EXPERIMENTAL_CXX_IMPORT_STD)
+  if(CMAKE_VERSION VERSION_EQUAL "4.1.2")
+    set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "d0edc3af-4c50-42ea-a356-e2862fe7a444")
+  else()
+    set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "0e5b6991-d74f-4b3d-a41c-cf096e0b2508")
+  endif()
+endif()
 
-  # Setup project details.
+set(CMAKE_CXX_COMPILER_IMPORT_STD ON)
+
+# Setup project details.
 project(arachne LANGUAGES CXX)
 
 # C++ standards setup.
@@ -19,7 +26,8 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 23)
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-# set(CMAKE_CXX_SCAN_FOR_MODULES ON)
+
+set(CMAKE_CXX_MODULE_STD 1)
 
 # Add cmake directory to the modules path.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")

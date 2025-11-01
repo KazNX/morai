@@ -20,7 +20,7 @@ set_target_properties(arachne PROPERTIES
 
 target_compile_features(arachne
   PRIVATE cxx_std_23
-  INTERFACE cxx_std_20
+  INTERFACE cxx_std_23
 )
 
 target_compile_options(arachne

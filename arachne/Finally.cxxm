@@ -61,7 +61,7 @@ private:
 ///
 /// This comes from Microsoft GLS library -
 /// https://github.com/microsoft/GSL/blob/main/include/gsl/util
-export template <class F>
+template <class F>
   requires std::is_invocable_v<F>
 [[nodiscard]] auto finally(F &&action) noexcept
 {

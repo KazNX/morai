@@ -1,5 +1,7 @@
 import arachne;
 
+import std;
+
 #include <gtest/gtest.h>
 
 namespace arachne

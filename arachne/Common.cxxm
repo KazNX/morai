@@ -4,7 +4,7 @@ import std;
 
 export namespace arachne
 {
-export using Id = std::size_t;
-export using WaitCondition = std::function<bool()>;
-export constexpr Id InvalidFibre = ~static_cast<std::size_t>(0);
+using Id = std::size_t;
+using WaitCondition = std::function<bool()>;
+constexpr Id InvalidFibre = ~static_cast<std::size_t>(0);
 }  // namespace arachne
