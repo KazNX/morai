@@ -11,11 +11,14 @@ threads.
 
 ## Requirements
 
-- C++23 modules compatible compiler
-  - Only MSVC seems to work. Clang falls short mixing modules and gtest.
-  - Clang experimental
-    - Must set `-DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -stdlib=libc++`
+- C++20 compatible compiler
 
 ## TODO
 
 - [ ] Usage examples
+- [ ] Features to consider
+  - [ ] Scheduling priority
+    - [ ] Set on create
+    - [ ] Adjustable
+  - [ ] Reschedule yield statement - update again on a cycle
+  - [ ] Deliberate update request by fibre ID(s)

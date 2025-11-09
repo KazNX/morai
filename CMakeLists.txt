@@ -46,6 +46,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Include sub projects.
 add_subdirectory(arachne)
+add_subdirectory(examples)
 
 if(FIBRE_BUILD_TESTS)
   # We can enable testing here and/or in the subdirectory, but doing it here allows us to run CTest from the build root.
