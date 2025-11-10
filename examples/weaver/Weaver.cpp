@@ -99,12 +99,15 @@ struct Screen::Imp
   using WindowPtr = std::unique_ptr<WINDOW, decltype(&delwin)>;
   std::vector<Layer> layers;
   std::unique_ptr<WINDOW, decltype(&delwin)> window{ newwin(0, 0, 0, 0), &delwin };
+  uint8_t next_colour_pair = 1;
 
   Imp()
   {
     initscr();
     cbreak();
     noecho();
+    timeout(0);
+    start_color();
     window = WindowPtr{ newwin(0, 0, 0, 0), &delwin };
     keypad(window.get(), TRUE);
     nodelay(window.get(), TRUE);
@@ -143,6 +146,13 @@ std::optional<Character> Screen::input() const
   return std::nullopt;
 }
 
+uint8_t Screen::defineColour(Colour fg, Colour bg)
+{
+  const auto id = _imp->next_colour_pair++;
+  init_pair(id, static_cast<short>(fg), static_cast<short>(bg));
+  return id;
+}
+
 View &Screen::addLayer(int32_t id, const Viewport &viewport)
 {
   for (auto iter = _imp->layers.begin(); iter != _imp->layers.end(); ++iter)
@@ -179,12 +189,17 @@ void Screen::draw()
     const int width = layer.view.viewport().size.width;
     for (int y = layer.view.viewport().origin.y; y < layer.view.viewport().origin.y + height; ++y)
     {
-      mvwaddchnstr(_imp->window.get(), 0, y,
-                   reinterpret_cast<const chtype *>(layer.view.data().data()) + y * width, width);
+      for (int x = layer.view.viewport().origin.x; x < layer.view.viewport().origin.x + width; ++x)
+      {
+        const auto ch = layer.view.character({ x, y });
+        if (ch != 0)
+        {
+          mvwaddch(_imp->window.get(), y, x, static_cast<chtype>(ch));
+        }
+      }
     }
   }
 }
-
 
 void Screen::clear()
 {

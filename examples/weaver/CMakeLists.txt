@@ -15,6 +15,7 @@ target_sources(weaver
 target_link_libraries(weaver
   PRIVATE
     "${CURSES_LIBRARY}"
+    SDL2::SDL2-static
 )
 
 target_include_directories(weaver

@@ -4,6 +4,7 @@
 
 #include "Key.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -16,23 +17,84 @@ namespace weaver
 {
 struct WEAVER_EXPORT Coord
 {
-  int x;
-  int y;
+  int x = 0;
+  int y = 0;
 };
+
+inline Coord operator+(const Coord &a, const Coord &b)
+{
+  return Coord{ a.x + b.x, a.y + b.y };
+}
+
+inline Coord &operator+=(Coord &a, const Coord &b)
+{
+  a = a + b;
+  return a;
+}
+
+inline Coord operator-(const Coord &a, const Coord &b)
+{
+  return Coord{ a.x - b.x, a.y - b.y };
+}
+
+inline Coord &operator-=(Coord &a, const Coord &b)
+{
+  a - b;
+  return a;
+}
+
+inline Coord operator*(const Coord &a, const int scalar)
+{
+  return Coord{ a.x * scalar, a.y * scalar };
+}
+
+inline Coord &operator*=(Coord &a, const int scalar)
+{
+  a = a * scalar;
+  return a;
+}
+
+inline Coord operator*(const int scalar, const Coord &a)
+{
+  return Coord{ a.x * scalar, a.y * scalar };
+}
+
+inline Coord operator/(const Coord &a, const int scalar)
+{
+  return Coord{ a.x / scalar, a.y / scalar };
+}
+
+inline Coord &operator/=(Coord &a, const int scalar)
+{
+  a = a / scalar;
+  return a;
+}
 
 struct WEAVER_EXPORT Size
 {
-  int width;
-  int height;
+  int width = 0;
+  int height = 0;
 };
 
 struct WEAVER_EXPORT Viewport
 {
-  Coord origin;
-  Size size;
+  Coord origin{};
+  Size size{};
 };
 
-enum class Color : uint8_t
+inline Coord clamp(const Viewport &view, const Coord &coord)
+{
+  return Coord{ .x = std::clamp(coord.x, view.origin.x, view.origin.x + view.size.width - 1),
+                .y = std::clamp(coord.y, view.origin.y, view.origin.y + view.size.height - 1) };
+}
+
+inline bool contains(const Viewport &view, const Coord &coord)
+{
+  return coord.x >= view.origin.x && coord.x < view.origin.x + view.size.width &&
+         coord.y >= view.origin.y && coord.y < view.origin.y + view.size.height;
+}
+
+enum class Colour : uint8_t
 {
   Black,
   Red,
@@ -62,19 +124,27 @@ Modifier &operator&=(Modifier &a, Modifier b);
 
 using Character = uint32_t;
 
-inline Character character(uint16_t ch, Modifier modifiers = Modifier::None,
-                           Color fg = Color::White, Color bg = Color::Black)
+constexpr Character character(const uint16_t ch, const Modifier modifiers = Modifier::None,
+                              const uint8_t colour_pair = 0)
 {
   return (static_cast<Character>(ch) & 0x0000FFFFu) |
          (static_cast<Character>(static_cast<uint8_t>(modifiers)) << 16u) |
-         (static_cast<Character>(static_cast<uint8_t>(fg) & 0xfu) << 24u) |
-         (static_cast<Character>(static_cast<uint8_t>(bg) & 0xfu) << 28u);
+         (static_cast<Character>(static_cast<uint8_t>(colour_pair) & 0xffu) << 24u);
 }
 
-inline Character character(char ch, Modifier modifiers = Modifier::None, Color fg = Color::White,
-                           Color bg = Color::Black)
+constexpr Character character(char ch, Modifier modifiers = Modifier::None, uint8_t colour_pair = 0)
 {
-  return character(static_cast<uint16_t>(ch), modifiers, fg, bg);
+  return character(static_cast<uint16_t>(ch), modifiers, colour_pair);
+}
+
+constexpr Character character(uint16_t ch, uint8_t colour_pair)
+{
+  return character(ch, Modifier::None, colour_pair);
+}
+
+constexpr Character character(char ch, uint8_t colour_pair)
+{
+  return character(static_cast<uint16_t>(ch), Modifier::None, colour_pair);
 }
 
 class WEAVER_EXPORT View
@@ -122,6 +192,8 @@ public:
   [[nodiscard]] Viewport viewport() const;
 
   [[nodiscard]] std::optional<Character> input() const;
+
+  [[nodiscard]] uint8_t defineColour(Colour fg, Colour bg);
 
   View &addLayer(int32_t id, const Viewport &viewport);
   View &layer(int32_t id);

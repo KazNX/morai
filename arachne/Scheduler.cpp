@@ -66,6 +66,8 @@ void Scheduler::update(const double epoch_time_s)
   _in_update = true;
   [[maybe_unused]] const auto cleanup = finally([this]() { _in_update = false; });
 
+  _time.dt = epoch_time_s - _time.epoch_time_s;
+  _time.epoch_time_s = epoch_time_s;
   _expiry.clear();
   for (std::size_t idx = 0; auto &&fibre : _fibres)
   {

@@ -8,6 +8,12 @@
 
 namespace arachne
 {
+struct Time
+{
+  double epoch_time_s = 0.0;
+  double dt = 0.0;
+};
+
 /// Implements a fibre management and update scheduler for fibres - sometimes known as microthreads.
 ///
 /// The fibre @c Scheduler implements cooperative multitasking in a single thread. Fibres are
@@ -88,6 +94,8 @@ public:
   /// Check if there is a fibre running with the given ID.
   [[nodiscard]] bool isRunning(Id fibre_id) const noexcept;
 
+  [[nodiscard]] const Time &time() const noexcept { return _time; }
+
   Id start(Fibre &&fibre);
   bool cancel(Id fibre_id);
   std::size_t cancel(std::span<const Id> fibre_ids);
@@ -135,6 +143,7 @@ private:
   std::vector<FibreEntry> _new_fibres{};
   Id _next_id = 0u;
   Expiry _expiry{};
+  Time _time{};
   bool _in_update = false;
 };
 }  // namespace arachne
