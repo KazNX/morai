@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "arachne",
+  "version-string": "0.1.0",
+  "description": "A fibre/microthread library build on C++ coroutines.",
+  "features": {
+    "tests": {
+      "description": "Build with unit tests.",
+      "dependencies": [
+        "gtest"
+      ]
+    },
+    "examples": {
+      "description": "Build examples.",
+      "dependencies": [
+        {
+          "name": "pdcurses",
+          "platform": "windows"
+        },
+        "sdl3"
+      ]
+    }
+  },
+  "builtin-baseline": "8fbf295ab5283313932f65a597a2c1f09a73fafd"
+}

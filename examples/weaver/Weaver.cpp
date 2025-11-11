@@ -1,5 +1,6 @@
 #include "Weaver.hpp"
 
+#include <SDL3/SDL.h>
 #include <curses.h>
 
 #include <array>
@@ -100,9 +101,11 @@ struct Screen::Imp
   std::vector<Layer> layers;
   std::unique_ptr<WINDOW, decltype(&delwin)> window{ newwin(0, 0, 0, 0), &delwin };
   uint8_t next_colour_pair = 1;
+  bool initialised = true;
 
   Imp()
   {
+    initialised = SDL_Init(SDL_INIT_VIDEO) == 0;
     initscr();
     cbreak();
     noecho();
@@ -113,6 +116,8 @@ struct Screen::Imp
     nodelay(window.get(), TRUE);
     curs_set(0);
   }
+
+  ~Imp() { SDL_Quit(); }
 };
 
 Screen::Screen()

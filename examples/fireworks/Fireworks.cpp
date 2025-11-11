@@ -123,14 +123,19 @@ arachne::Fibre spark(std::shared_ptr<GlobalState> state, Spark spark, weaver::Co
   while (spark.lifetime > 0)
   {
     weaver::View &view = state->foreground();
-    const weaver::Coord pos =
-      weaver::clamp(view.viewport(),
-                    { spark.position.x / Spark::SPARK_UNIT, spark.position.y / Spark::SPARK_UNIT });
-    view.setCharacter(pos, sprite[sprite_dist(state->rng)]);
-    co_yield {};
-
-    // Drop a fizzle at the previous position.
-    state->scheduler.start(fizzle(state, pos, FIZZLE_DURATION));
+    const weaver::Coord pos = { spark.position.x / Spark::SPARK_UNIT,
+                                spark.position.y / Spark::SPARK_UNIT };
+    if (weaver::contains(view.viewport(), pos))
+    {
+      view.setCharacter(pos, sprite[sprite_dist(state->rng)]);
+      co_yield {};
+      // Drop a fizzle at the previous position.
+      state->scheduler.start(fizzle(state, pos, FIZZLE_DURATION));
+    }
+    else
+    {
+      co_yield {};
+    }
 
     const auto dt = static_cast<float>(state->scheduler.time().dt);
 
@@ -141,11 +146,13 @@ arachne::Fibre spark(std::shared_ptr<GlobalState> state, Spark spark, weaver::Co
     spark.lifetime -= dt;
   }
 
-  std::normal_distribution fizzle_dist(FIZZLE_DURATION, FIZZLE_STDDEV);
-  const weaver::Coord pos =
-    weaver::clamp(state->foreground().viewport(),
-                  { spark.position.x / Spark::SPARK_UNIT, spark.position.y / Spark::SPARK_UNIT });
-  state->scheduler.start(fizzle(state, pos, fizzle_dist(state->rng)));
+  const weaver::Coord pos = { spark.position.x / Spark::SPARK_UNIT,
+                              spark.position.y / Spark::SPARK_UNIT };
+  if (weaver::contains(state->foreground().viewport(), pos))
+  {
+    std::normal_distribution fizzle_dist(FIZZLE_DURATION, FIZZLE_STDDEV);
+    state->scheduler.start(fizzle(state, pos, fizzle_dist(state->rng)));
+  }
 }
 
 arachne::Fibre explode(std::shared_ptr<GlobalState> state, weaver::Coord position,
@@ -217,7 +224,7 @@ arachne::Fibre launcher(std::shared_ptr<GlobalState> state, std::shared_ptr<Laun
       state->scheduler.start(rocket(state, launcher->position));
     }
 
-    launcher->position.x = std::clamp(launcher->position.x, 0, state->screen.size().width - 1);
+    launcher->position = weaver::clamp(state->screen.viewport(), launcher->position);
 
     state->foreground().setCharacter(launcher->position, '^');
 
