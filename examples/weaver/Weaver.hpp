@@ -2,12 +2,9 @@
 
 #include "WeaverExport.hpp"
 
-#include "Key.hpp"
-
 #include <algorithm>
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <span>
 #include <string_view>
 #include <type_traits>
@@ -190,8 +187,6 @@ public:
 
   bool setViewport(const Viewport &viewport);
   [[nodiscard]] Viewport viewport() const;
-
-  [[nodiscard]] std::optional<Character> input() const;
 
   [[nodiscard]] uint8_t defineColour(Colour fg, Colour bg);
 

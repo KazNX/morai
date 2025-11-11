@@ -12,10 +12,23 @@ target_sources(weaver
     Weaver.hpp
 )
 
+if(WIN32)
+  target_sources(weaver
+    PRIVATE
+      Key_Win32.cpp
+  )
+
+  target_compile_definitions(weaver PRIVATE WIN32_LEAN_AND_MEAN)
+
+  target_link_libraries(weaver
+    PRIVATE
+      user32
+  )
+endif()
+
 target_link_libraries(weaver
   PRIVATE
     "${CURSES_LIBRARY}"
-    SDL3::SDL3
 )
 
 target_include_directories(weaver

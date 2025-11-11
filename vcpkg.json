@@ -16,8 +16,7 @@
         {
           "name": "pdcurses",
           "platform": "windows"
-        },
-        "sdl3"
+        }
       ]
     }
   },

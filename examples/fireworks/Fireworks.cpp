@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <random>
+#include <weaver/Key.hpp>
 #include <weaver/Weaver.hpp>
 
 #include <algorithm>
@@ -25,6 +26,7 @@ struct Range
   T max{};
 };
 
+constexpr double LAUNCH_DELAY = 0.1;
 constexpr float FIZZLE_DURATION = 0.6f;
 constexpr float FIZZLE_SHORT_DURATION = 0.2f;
 constexpr float FIZZLE_STDDEV = 0.3f;
@@ -33,22 +35,9 @@ constexpr Range SPARK_DELAY{ 0.0f, 0.05f };  // Delay between spawning sparks
 constexpr Range SPARK_SPEED{ 5.0f, 10.0f };  // Initial spark speed
 constexpr Range SPARK_LIFETIME{ 1.5f, 2.5f };
 
-struct Input
-{
-  std::vector<weaver::Key> keystrokes;
-
-  [[nodiscard]] bool pressed(weaver::Key key) const
-  {
-    return std::ranges::find(keystrokes, key) != keystrokes.end();
-  }
-
-  void clear() { keystrokes.clear(); }
-};
-
 struct GlobalState
 {
   arachne::Scheduler scheduler;
-  Input input{};
   weaver::Screen screen;
   std::chrono::duration<double> frame_interval{ 1.0 / 60.0 };
   std::mt19937 rng{ std::random_device{}() };
@@ -209,19 +198,26 @@ arachne::Fibre launcher(std::shared_ptr<GlobalState> state, std::shared_ptr<Laun
   launcher->position.x = state->screen.size().width / 2;
   launcher->position.y = state->screen.size().height - 2;
 
+  double last_launch_time = -1.0;
+
   for (;;)
   {
-    if (state->input.pressed(weaver::Key::A) || state->input.pressed(weaver::Key::a))
+    if (weaver::anyKeyDown({ weaver::Key::A, weaver::Key::ArrowLeft }))
     {
       --launcher->position.x;
     }
-    if (state->input.pressed(weaver::Key::D) || state->input.pressed(weaver::Key::d))
+    if (weaver::anyKeyDown({ weaver::Key::D, weaver::Key::ArrowRight }))
     {
       ++launcher->position.x;
     }
-    if (state->input.pressed(weaver::Key::Space))
+    if (weaver::anyKeyDown({ weaver::Key::Space, weaver::Key::Enter }))
     {
-      state->scheduler.start(rocket(state, launcher->position));
+      const double current_time = state->scheduler.time().epoch_time_s;
+      if (current_time - last_launch_time >= LAUNCH_DELAY)
+      {
+        last_launch_time = current_time;
+        state->scheduler.start(rocket(state, launcher->position));
+      }
     }
 
     launcher->position = weaver::clamp(state->screen.viewport(), launcher->position);
@@ -239,7 +235,6 @@ arachne::Fibre render(std::shared_ptr<GlobalState> state)
     state->screen.draw();
     state->background().clear();
     state->foreground().clear();
-    state->input.keystrokes.clear();
     co_await state->frame_interval;
   }
 }
@@ -248,14 +243,9 @@ arachne::Fibre input(std::shared_ptr<GlobalState> state)
 {
   for (;;)
   {
-    for (std::optional<uint32_t> ch = state->screen.input(); ch.has_value();
-         ch = state->screen.input())
+    if (weaver::anyKeyDown({ weaver::Key::Q, weaver::Key::Escape }))
     {
-      state->input.keystrokes.push_back(static_cast<weaver::Key>(*ch));
-      if (*ch == 'q' || *ch == 'Q')
-      {
-        state->quit = true;
-      }
+      state->quit = true;
     }
     co_yield {};
   }

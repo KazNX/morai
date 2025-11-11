@@ -8,8 +8,6 @@ else()
   find_package(Curses REQUIRED)
 endif()
 
-find_package(SDL3 REQUIRED)
-
 # List all CMake targets defined so far
 get_property(all_targets GLOBAL PROPERTY TARGETS)
 message(STATUS "CMake targets: ${all_targets}")
