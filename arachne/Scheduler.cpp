@@ -18,9 +18,12 @@ bool Scheduler::isRunning(const Id fibre_id) const noexcept
 
 Id Scheduler::start(Fibre &&fibre)
 {
-  const Id fibre_id = _next_id;
-  // Increment by 2 so overflow skips InvalidFibre. Unlikely, but you never know
-  _next_id += 2;
+  const Id fibre_id = { .id = _next_id };
+  ++_next_id;
+  if (_next_id == InvalidFibreValue)
+  {
+    ++_next_id;
+  }
   auto &fibre_set = (_in_update) ? _new_fibres : _fibres;
   fibre_set.emplace_back(FibreEntry{ .id = fibre_id, .fibre = std::move(fibre) });
   return fibre_id;

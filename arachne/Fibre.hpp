@@ -100,6 +100,13 @@ public:
     {
       return { .resumption = wait(condition) };
     }
+
+    /// Prevent accidentally waiting on a fibre ID. The correct expression is
+    ///
+    /// ```
+    /// co_await scheduler.await(fibre_id);
+    /// ```
+    Awaitable await_transform(Id) = delete;
   };
 
   Fibre() = default;

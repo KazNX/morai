@@ -141,7 +141,7 @@ private:
   std::vector<FibreEntry> _fibres{};
   /// Fibres added during an update. Migrated at the end of the update.
   std::vector<FibreEntry> _new_fibres{};
-  Id _next_id = 0u;
+  IdValueType _next_id = 0u;
   Expiry _expiry{};
   Time _time{};
   bool _in_update = false;

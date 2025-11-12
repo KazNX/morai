@@ -5,7 +5,19 @@
 
 namespace arachne
 {
-using Id = std::size_t;
+using IdValueType = std::size_t;
+constexpr auto InvalidFibreValue = ~static_cast<IdValueType>(0);
+
+struct Id
+{
+  IdValueType id = InvalidFibreValue;
+};
+
+constexpr Id InvalidFibre{ .id = InvalidFibreValue };
 using WaitCondition = std::function<bool()>;
-constexpr Id InvalidFibre = ~static_cast<std::size_t>(0);
+
+inline bool operator==(const Id &lhs, const Id &rhs) noexcept
+{
+  return lhs.id == rhs.id;
+}
 }  // namespace arachne
