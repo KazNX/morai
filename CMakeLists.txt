@@ -16,7 +16,8 @@ list(APPEND CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}")
 include(tools)
 
 # Add project level options here.
-option(FIBRE_BUILD_TESTS "Build unit tests?" ON)
+option(ARACHNE_BUILD_TESTS "Build unit tests?" ON)
+option(ARACHNE_BUILD_EXAMPLES "Build unit tests?" OFF)
 
 set(ConfigPackageLocation lib/cmake/arachne)
 
@@ -46,9 +47,12 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Include sub projects.
 add_subdirectory(arachne)
-add_subdirectory(examples)
 
-if(FIBRE_BUILD_TESTS)
+if(ARACHNE_BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
+
+if(ARACHNE_BUILD_TESTS)
   # We can enable testing here and/or in the subdirectory, but doing it here allows us to run CTest from the build root.
   # To run the tests, we execute:
   #   CTest -C [Debug|Release|RelWithDebInfo|MinSizeRel] --output-on-failure
@@ -59,4 +63,4 @@ if(FIBRE_BUILD_TESTS)
   # Note: not all projects under tests actually add something for CTest.
   enable_testing()
   add_subdirectory(test)
-endif(FIBRE_BUILD_TESTS)
+endif()

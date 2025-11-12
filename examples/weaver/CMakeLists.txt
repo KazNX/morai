@@ -14,6 +14,8 @@ target_sources(weaver
 )
 
 if(WIN32)
+  find_package(unofficial-pdcurses REQUIRED)
+
   target_sources(weaver
     PRIVATE
       Input_Win32.cpp
@@ -23,19 +25,21 @@ if(WIN32)
 
   target_link_libraries(weaver
     PRIVATE
+      unofficial::pdcurses::pdcurses
       user32
   )
 else()
+  find_package(Curses REQUIRED)
   target_sources(weaver
     PRIVATE
       Input_Curses.cpp
   )
-endif()
 
-target_link_libraries(weaver
-  PRIVATE
-    "${CURSES_LIBRARY}"
-)
+  target_link_libraries(weaver
+    PRIVATE
+      "${CURSES_LIBRARY}"
+  )
+endif()
 
 target_include_directories(weaver
   PUBLIC

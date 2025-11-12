@@ -7,17 +7,17 @@
 #include <weaver/Input.hpp>
 #include <weaver/Weaver.hpp>
 
-#include <algorithm>
+#include <cxxopts.hpp>
+
 #include <array>
 #include <chrono>
-#include <format>
+#include <iostream>
 #include <numbers>
 #include <random>
-#include <ranges>
 #include <thread>
 #include <type_traits>
 
-
+// Utility type
 template <typename T>
   requires std::is_arithmetic_v<T>
 struct Range
@@ -26,27 +26,41 @@ struct Range
   T max{};
 };
 
+// Constants
 constexpr double LAUNCH_DELAY = 0.1;
+constexpr Range AUTO_LAUNCH_WINDOW = { 0.2, 2.0 };
 constexpr float FIZZLE_DURATION = 0.6f;
 constexpr float FIZZLE_SHORT_DURATION = 0.2f;
 constexpr float FIZZLE_STDDEV = 0.3f;
+constexpr float GRAVITY = 3.0f;
 constexpr Range SPARKS{ 10, 20 };            // Number of sparks to spawn
 constexpr Range SPARK_DELAY{ 0.0f, 0.05f };  // Delay between spawning sparks
 constexpr Range SPARK_SPEED{ 5.0f, 10.0f };  // Initial spark speed
 constexpr Range SPARK_LIFETIME{ 1.5f, 2.5f };
 
+constexpr auto MODE_SWITCH_KEY = weaver::Key::Tab;
+
+// Global state shared between fibres.
 struct GlobalState
 {
+  /// Fibre scheduler. Only one is used.
   arachne::Scheduler scheduler;
+  /// Screen display.
   weaver::Screen screen;
+  /// Input key handler.
   weaver::Input input{ screen };
+  /// Target frame interval.
   std::chrono::duration<double> frame_interval{ 1.0 / 60.0 };
+  /// Shared random number generator.
   std::mt19937 rng{ std::random_device{}() };
+  /// Colour pair definitions.
   std::array<uint8_t, 8> colour_pairs{};
-  float gravity = 5.f;
+  /// Quit flag.
   bool quit = false;
 
+  /// Get the background rendering layer.
   [[nodiscard]] weaver::View &background() { return screen.layer(0); }
+  /// Get the foreground rendering layer.
   [[nodiscard]] weaver::View &foreground() { return screen.layer(1); }
 
   GlobalState()
@@ -65,41 +79,55 @@ struct GlobalState
   }
 };
 
+/// Firework launcher state variables.
 struct Launcher
 {
   weaver::Coord position;
   arachne::Id fibre;
 };
 
+/// Spark(le) state variables.
 struct Spark
 {
-  // Quanitsation unit for fixed point position/velocity
+  /// Quanitsation unit for fixed point position/velocity
   inline static int SPARK_UNIT = 1'000;
   weaver::Coord position{};
   weaver::Coord velocity{};
   float lifetime = 0;
 };
 
+/// Starts a fizzle effect at the given position. Sparkles for @p duration before expiring.
 arachne::Fibre fizzle(std::shared_ptr<GlobalState> state, weaver::Coord position, float duration)
 {
-  const std::array sprite = {
-    weaver::character('.', state->colour_pairs[1]), weaver::character('.', state->colour_pairs[2]),
-    weaver::character('.', state->colour_pairs[3]), weaver::character('.', state->colour_pairs[4]),
-    weaver::character('.', state->colour_pairs[5]), weaver::character('.', state->colour_pairs[6]),
-    weaver::character('.', state->colour_pairs[7]),
+  const std::array sprites = {
+    weaver::character('.', state->colour_pairs[1]),  //
+    weaver::character('.', state->colour_pairs[2]),  //
+    weaver::character('.', state->colour_pairs[3]),  //
+    weaver::character('.', state->colour_pairs[4]),  //
+    weaver::character('.', state->colour_pairs[5]),  //
+    weaver::character('.', state->colour_pairs[6]),  //
+    weaver::character('.', state->colour_pairs[7]),  //
+    // Give some chance to be blank.
+    weaver::character('\0'),  //
+    weaver::character('\0'),  //
+    weaver::character('\0'),  //
+    weaver::character('\0'),  //
   };
-  std::uniform_int_distribution sprite_dist(0, static_cast<int>(sprite.size() - 1));
+  std::uniform_int_distribution sprite_dist(0, static_cast<int>(sprites.size() - 1));
 
   while (duration > 0)
   {
     const size_t index =
-      static_cast<size_t>((1.0f - (duration / duration)) * static_cast<float>(sprite.size() - 1));
-    state->background().setCharacter(position, sprite[sprite_dist(state->rng)]);
+      static_cast<size_t>((1.0f - (duration / duration)) * static_cast<float>(sprites.size() - 1));
+    const auto sprite = sprites[sprite_dist(state->rng)];
+    state->background().setCharacter(position, sprite);
     co_yield {};
     duration -= static_cast<float>(state->scheduler.time().dt);
   }
 }
 
+/// Starts a firework spark, which moves at the given velocity with gravity applied.
+/// Drops @c fizzle() effects as it moves and expires.
 arachne::Fibre spark(std::shared_ptr<GlobalState> state, Spark spark, weaver::Colour colour)
 {
   const uint8_t colour_pair =
@@ -131,8 +159,7 @@ arachne::Fibre spark(std::shared_ptr<GlobalState> state, Spark spark, weaver::Co
 
     spark.position.x += static_cast<int>(static_cast<float>(spark.velocity.x) * dt);
     spark.position.y += static_cast<int>(static_cast<float>(spark.velocity.y) * dt);
-    spark.velocity.y +=
-      static_cast<int>(state->gravity * dt * static_cast<float>(Spark::SPARK_UNIT));
+    spark.velocity.y += static_cast<int>(GRAVITY * dt * static_cast<float>(Spark::SPARK_UNIT));
     spark.lifetime -= dt;
   }
 
@@ -145,6 +172,7 @@ arachne::Fibre spark(std::shared_ptr<GlobalState> state, Spark spark, weaver::Co
   }
 }
 
+/// Firework explosion. Spawns @c spark() fibres.
 arachne::Fibre explode(std::shared_ptr<GlobalState> state, weaver::Coord position,
                        weaver::Colour colour)
 {
@@ -172,6 +200,7 @@ arachne::Fibre explode(std::shared_ptr<GlobalState> state, weaver::Coord positio
   co_return;
 }
 
+/// Firework rocket fibre. Ascends then explodes.
 arachne::Fibre rocket(std::shared_ptr<GlobalState> state, weaver::Coord position)
 {
   // Choose a random colour, but not black.
@@ -194,15 +223,21 @@ arachne::Fibre rocket(std::shared_ptr<GlobalState> state, weaver::Coord position
   state->scheduler.start(explode(state, position, colour));
 }
 
-arachne::Fibre launcher(std::shared_ptr<GlobalState> state, std::shared_ptr<Launcher> launcher)
+/// User controller launcher fibre.
+arachne::Fibre launcherUser(std::shared_ptr<GlobalState> state, std::shared_ptr<Launcher> launcher)
 {
-  launcher->position.x = state->screen.size().width / 2;
-  launcher->position.y = state->screen.size().height - 2;
-
   double last_launch_time = -1.0;
 
   for (;;)
   {
+    // Switch to auto mode?
+    if (state->input.keyState(MODE_SWITCH_KEY) == weaver::KeyState::Down)
+    {
+      // Wait for the key release to prevent bouncing.
+      co_await [state]() { return state->input.keyState(MODE_SWITCH_KEY) == weaver::KeyState::Up; };
+      co_return;
+    }
+
     if (state->input.anyKeyDown({ weaver::Key::A, weaver::Key::ArrowLeft }))
     {
       --launcher->position.x;
@@ -229,6 +264,55 @@ arachne::Fibre launcher(std::shared_ptr<GlobalState> state, std::shared_ptr<Laun
   }
 }
 
+/// Autonatic launcher fibre.
+arachne::Fibre launcherAuto(std::shared_ptr<GlobalState> state, std::shared_ptr<Launcher> launcher)
+{
+  std::uniform_int_distribution<int> position_dist(1, state->screen.size().width - 2);
+  std::uniform_real_distribution<double> launch_delay_dist(AUTO_LAUNCH_WINDOW.min,
+                                                           AUTO_LAUNCH_WINDOW.max);
+
+  double next_launch_time = state->scheduler.time().epoch_time_s + launch_delay_dist(state->rng);
+
+  for (;;)
+  {
+    // Switch to manual mode?
+    if (state->input.keyState(MODE_SWITCH_KEY) == weaver::KeyState::Down)
+    {
+      // Wait for the key release to prevent bouncing.
+      co_await [state]() { return state->input.keyState(MODE_SWITCH_KEY) == weaver::KeyState::Up; };
+      co_return;
+    }
+
+    const double current_time = state->scheduler.time().epoch_time_s;
+    if (current_time >= next_launch_time)
+    {
+      launcher->position.x = position_dist(state->rng);
+      state->scheduler.start(rocket(state, launcher->position));
+      next_launch_time = state->scheduler.time().epoch_time_s + launch_delay_dist(state->rng);
+    }
+
+    state->foreground().setCharacter(launcher->position, '^');
+
+    co_yield {};
+  }
+}
+
+/// Launcher selector. Toggles running user and automatic launchers as one expires.
+arachne::Fibre launcher(std::shared_ptr<GlobalState> state, std::shared_ptr<Launcher> launcher)
+{
+  launcher->position.x = state->screen.size().width / 2;
+  launcher->position.y = state->screen.size().height - 2;
+
+  for (;;)
+  {
+    // Start with the user mode launcher. If that ends we'll switch to auto mode and we basically
+    // toggle between them.
+    co_await state->scheduler.await(state->scheduler.start(launcherUser(state, launcher)));
+    co_await state->scheduler.await(state->scheduler.start(launcherAuto(state, launcher)));
+  }
+}
+
+/// Rendering fibre.
 arachne::Fibre render(std::shared_ptr<GlobalState> state)
 {
   for (;;)
@@ -240,6 +324,7 @@ arachne::Fibre render(std::shared_ptr<GlobalState> state)
   }
 }
 
+/// Input handling fibre.
 arachne::Fibre input(std::shared_ptr<GlobalState> state)
 {
   for (;;)
@@ -253,6 +338,7 @@ arachne::Fibre input(std::shared_ptr<GlobalState> state)
   }
 }
 
+/// Start the core fibres.
 void startFibres(std::shared_ptr<GlobalState> &state)
 {
   state->scheduler.start(render(state));
@@ -260,8 +346,55 @@ void startFibres(std::shared_ptr<GlobalState> &state)
   state->scheduler.start(launcher(state, std::make_shared<Launcher>()));
 }
 
-int main()
+struct Options
 {
+  // Nothing right now.
+};
+
+int parseArgs(Options &options, int argc, char *argv[])
+{
+  try
+  {
+    cxxopts::Options cmd_options(
+      "Fireworks",
+      R"(A terminal based fireworks display showing some basic Arachne fibre usage patterns.
+These are not necessarily good patterns, just demonstrative patterns.
+
+Keys:
+  A/D or Left/Right Arrow: Move launcher (manual mode)
+  Space or Enter: Launch firework (manual mode)
+  Tab: Toggle between manual and auto launch modes
+  Q or Escape: Quit
+
+Note: Windows provides continuous, multi-key input. Other platforms rely on key repeat.
+)");
+    cmd_options.add_options()("h,help", "Print help");
+
+    const auto result = cmd_options.parse(argc, argv);
+
+    if (result.count("help"))
+    {
+      std::cout << cmd_options.help() << std::endl;
+      return 1;
+    }
+  }
+  catch (const cxxopts::exceptions::exception &e)
+  {
+    std::cerr << "Error parsing options: " << e.what() << std::endl;
+    return 2;
+  }
+
+  return 0;
+}
+
+int main(int argc, char *argv[])
+{
+  Options options{};
+  if (const int error_code = parseArgs(options, argc, argv); error_code != 0)
+  {
+    return error_code;
+  }
+
   std::shared_ptr<GlobalState> state = std::make_shared<GlobalState>();
 
   const auto start_time = std::chrono::steady_clock::now();

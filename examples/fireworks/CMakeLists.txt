@@ -9,6 +9,7 @@ target_link_libraries(fireworks
   PRIVATE
     arachne
     weaver
+    cxxopts
 )
 
 target_include_directories(fireworks
