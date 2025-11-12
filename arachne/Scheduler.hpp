@@ -96,8 +96,29 @@ public:
 
   [[nodiscard]] const Time &time() const noexcept { return _time; }
 
+  /// Start a fibre.
+  ///
+  /// This fibre is added to the scheduler and assigned the returned @c Id. The fibre entry point is
+  /// a coroutine using at least one of @c co_await, @c co_yield or @c co_return and with a
+  /// @c fibre::Fibre return type.
+  ///
+  /// @code
+  /// arachne::Scheduler scheduler;
+  /// arachne::Id fibre_id = scheduler.start([]() -> arachne::Fibre {
+  ///   std::cout << "Fibre started\n";
+  ///   co_await 1.0; // Sleep for one second
+  ///   std::cout << "Fibre done\n";
+  /// }()); // Note '()' as the lambda is immediately invoked.
+  /// @endcode
+  ///
+  /// @param fibre The fibre entry point.
+  /// @return The fibre @c Id. Maybe used for cancellation or @c await().
   Id start(Fibre &&fibre);
+  /// Cancel a running fibre by @c Id.
+  /// @param fibre_id @c Id of the fibre to cancel.
+  /// @return True if a fibre matching the @p fibre_id was found an cancelled.
   bool cancel(Id fibre_id);
+  /// Cancel multiple running fibres by @c Id.
   std::size_t cancel(std::span<const Id> fibre_ids);
 
   /// Generate a wait condition to wait until the specified fibre is no longer
@@ -109,8 +130,15 @@ public:
     return [this, fibre_id]() -> bool { return !isRunning(fibre_id); };
   }
 
+  /// Cancel all running fibres.
   void cancelAll();
 
+  /// Update all fibres. Blocks until all fibres have been updated. A blocking
+  /// fibre can stall the scheduler.
+  /// @param epoch_time_s The current epoch time in seconds. This is user
+  /// defined, but must be monotonically increasing.
+  /// @c std::chrono::system_clock::now().time_since_epoch() makes for a
+  /// reasonable default.
   void update(double epoch_time_s);
 
 private:
