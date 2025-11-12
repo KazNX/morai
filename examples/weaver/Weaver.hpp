@@ -177,6 +177,7 @@ private:
   std::vector<Character> _data;
 };
 
+struct ScreenImp;
 class WEAVER_EXPORT Screen
 {
 public:
@@ -198,16 +199,13 @@ public:
   /// Clear the screen buffer. Not effected until the next @c draw() call.
   void clear();
 
+  // Internal
+
+  [[nodiscard]] ScreenImp &imp() { return *_imp; }
+  [[nodiscard]] const ScreenImp &imp() const { return *_imp; }
+
 private:
-  struct Layer
-  {
-    int32_t id;
-    View view;
-  };
-
-  struct Imp;
-
-  std::unique_ptr<Imp> _imp;
+  std::unique_ptr<ScreenImp> _imp;
 };
 
 

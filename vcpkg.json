@@ -4,12 +4,6 @@
   "version-string": "0.1.0",
   "description": "A fibre/microthread library build on C++ coroutines.",
   "features": {
-    "tests": {
-      "description": "Build with unit tests.",
-      "dependencies": [
-        "gtest"
-      ]
-    },
     "examples": {
       "description": "Build examples.",
       "dependencies": [

@@ -1,4 +1,4 @@
-#include "Key.hpp"
+#include "Input.hpp"
 
 #include <array>
 #include <utility>
@@ -19,7 +19,7 @@ constexpr std::array CHARACTER_MAP = {
   KeyMapping{ VK_SPACE, Key::Space },
   KeyMapping{ VK_OEM_COMMA, Key::Comma },
   KeyMapping{ VK_OEM_MINUS, Key::Minus },
-  KeyMapping{ VK_OEM_PERIOD, Key::Dot },
+  KeyMapping{ VK_OEM_PERIOD, Key::Period },
   KeyMapping{ VK_OEM_2, Key::Slash },
   KeyMapping{ '0', Key::Num0 },
   KeyMapping{ '1', Key::Num1 },
@@ -138,7 +138,21 @@ constexpr std::array CHARACTER_MAP = {
 }
 }  // namespace
 
-KeyState keyState(const Key key)
+struct Input::Imp
+{
+  // Nothing required.
+};
+
+Input::Input([[maybe_unused]] Screen &screen)
+  : _imp{ std::make_unique<Imp>() }
+{}
+
+Input::~Input() = default;
+
+void Input::poll()
+{}
+
+KeyState Input::keyState(const Key key)
 {
   const uint32_t vk_code = mapKey(key);
 
@@ -153,7 +167,7 @@ KeyState keyState(const Key key)
   return KeyState::Up;
 }
 
-bool anyKeyDown(std::span<const Key> keys)
+bool Input::anyKeyDown(std::span<const Key> keys)
 {
   for (const auto &key : keys)
   {
@@ -165,7 +179,7 @@ bool anyKeyDown(std::span<const Key> keys)
   return false;
 }
 
-bool anyKeyUp(std::span<const Key> keys)
+bool Input::anyKeyUp(std::span<const Key> keys)
 {
   for (const auto &key : keys)
   {

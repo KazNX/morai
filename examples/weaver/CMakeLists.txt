@@ -8,6 +8,7 @@ generate_export_header(weaver
 
 target_sources(weaver
   PRIVATE
+    private/WeaverImp.hpp
     Weaver.cpp
     Weaver.hpp
 )
@@ -15,7 +16,7 @@ target_sources(weaver
 if(WIN32)
   target_sources(weaver
     PRIVATE
-      Key_Win32.cpp
+      Input_Win32.cpp
   )
 
   target_compile_definitions(weaver PRIVATE WIN32_LEAN_AND_MEAN)
@@ -23,6 +24,11 @@ if(WIN32)
   target_link_libraries(weaver
     PRIVATE
       user32
+  )
+else()
+  target_sources(weaver
+    PRIVATE
+      Input_Curses.cpp
   )
 endif()
 

@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <initializer_list>
+#include <memory>
 #include <span>
 
 namespace weaver
@@ -31,7 +32,7 @@ enum class Key : uint16_t
   Plus = 43,
   Comma = 44,
   Minus = 45,
-  Dot = 46,
+  Period = 46,
   Slash = 47,
   Num0 = 48,
   Num1 = 49,
@@ -180,7 +181,7 @@ enum class Key : uint16_t
   F24,
 };
 
-inline constexpr auto KEY_COUNT = static_cast<uint32_t>(Key::Delete) + 1;
+constexpr size_t KEY_COUNT = static_cast<size_t>(Key::F24) + 1;
 
 enum class KeyState : uint8_t
 {
@@ -188,17 +189,39 @@ enum class KeyState : uint8_t
   Down = 1,
 };
 
-[[nodiscard]] KeyState WEAVER_EXPORT keyState(Key key);
-[[nodiscard]] bool WEAVER_EXPORT anyKeyDown(std::span<const Key> keys);
-[[nodiscard]] bool WEAVER_EXPORT anyKeyUp(std::span<const Key> keys);
+class Screen;
 
-[[nodiscard]] inline bool anyKeyDown(std::initializer_list<Key> keys)
+class WEAVER_EXPORT Input
 {
-  return anyKeyDown(std::span<const Key>{ keys.begin(), keys.size() });
-}
+public:
+  Input(Screen &screen);
+  ~Input();
 
-[[nodiscard]] inline bool anyKeyUp(std::initializer_list<Key> keys)
-{
-  return anyKeyUp(std::span<const Key>{ keys.begin(), keys.size() });
-}
+  Input(const Input &) = delete;
+  Input(Input &&) = delete;
+  Input &operator=(const Input &) = delete;
+  Input &operator=(Input &&) = delete;
+
+  void poll();
+
+  [[nodiscard]] KeyState keyState(Key key);
+  [[nodiscard]] bool anyKeyDown(std::span<const Key> keys);
+  [[nodiscard]] bool anyKeyUp(std::span<const Key> keys);
+
+  [[nodiscard]] inline bool anyKeyDown(std::initializer_list<Key> keys)
+  {
+    return anyKeyDown(std::span<const Key>{ keys.begin(), keys.size() });
+  }
+
+  [[nodiscard]] inline bool anyKeyUp(std::initializer_list<Key> keys)
+  {
+    return anyKeyUp(std::span<const Key>{ keys.begin(), keys.size() });
+  }
+
+private:
+  struct Imp;
+
+  std::unique_ptr<Imp> _imp;
+};
+
 }  // namespace weaver

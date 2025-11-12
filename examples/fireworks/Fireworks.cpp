@@ -4,7 +4,7 @@
 
 #include <memory>
 #include <random>
-#include <weaver/Key.hpp>
+#include <weaver/Input.hpp>
 #include <weaver/Weaver.hpp>
 
 #include <algorithm>
@@ -39,6 +39,7 @@ struct GlobalState
 {
   arachne::Scheduler scheduler;
   weaver::Screen screen;
+  weaver::Input input{ screen };
   std::chrono::duration<double> frame_interval{ 1.0 / 60.0 };
   std::mt19937 rng{ std::random_device{}() };
   std::array<uint8_t, 8> colour_pairs{};
@@ -202,15 +203,15 @@ arachne::Fibre launcher(std::shared_ptr<GlobalState> state, std::shared_ptr<Laun
 
   for (;;)
   {
-    if (weaver::anyKeyDown({ weaver::Key::A, weaver::Key::ArrowLeft }))
+    if (state->input.anyKeyDown({ weaver::Key::A, weaver::Key::ArrowLeft }))
     {
       --launcher->position.x;
     }
-    if (weaver::anyKeyDown({ weaver::Key::D, weaver::Key::ArrowRight }))
+    if (state->input.anyKeyDown({ weaver::Key::D, weaver::Key::ArrowRight }))
     {
       ++launcher->position.x;
     }
-    if (weaver::anyKeyDown({ weaver::Key::Space, weaver::Key::Enter }))
+    if (state->input.anyKeyDown({ weaver::Key::Space, weaver::Key::Enter }))
     {
       const double current_time = state->scheduler.time().epoch_time_s;
       if (current_time - last_launch_time >= LAUNCH_DELAY)
@@ -243,7 +244,8 @@ arachne::Fibre input(std::shared_ptr<GlobalState> state)
 {
   for (;;)
   {
-    if (weaver::anyKeyDown({ weaver::Key::Q, weaver::Key::Escape }))
+    state->input.poll();
+    if (state->input.anyKeyDown({ weaver::Key::Q, weaver::Key::Escape }))
     {
       state->quit = true;
     }

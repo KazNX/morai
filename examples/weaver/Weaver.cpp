@@ -1,5 +1,7 @@
 #include "Weaver.hpp"
 
+#include "private/WeaverImp.hpp"
+
 #include <curses.h>
 
 #include <array>
@@ -53,29 +55,8 @@ void View::setString(Coord at, std::string_view text, bool clear_eol)
   }
 }
 
-struct Screen::Imp
-{
-  using WindowPtr = std::unique_ptr<WINDOW, decltype(&delwin)>;
-  std::vector<Layer> layers;
-  std::unique_ptr<WINDOW, decltype(&delwin)> window{ newwin(0, 0, 0, 0), &delwin };
-  uint8_t next_colour_pair = 1;
-
-  Imp()
-  {
-    initscr();
-    cbreak();
-    noecho();
-    timeout(0);
-    start_color();
-    window = WindowPtr{ newwin(0, 0, 0, 0), &delwin };
-    keypad(window.get(), TRUE);
-    nodelay(window.get(), TRUE);
-    curs_set(0);
-  }
-};
-
 Screen::Screen()
-  : _imp(std::make_unique<Imp>())
+  : _imp(std::make_unique<ScreenImp>())
 {
   int width = getmaxx(_imp->window.get());
   int height = getmaxy(_imp->window.get());
@@ -129,7 +110,11 @@ View &Screen::layer(int32_t id)
 
 void Screen::draw()
 {
-  wgetch(_imp->window.get());
+  if (_imp->input_hook)
+  {
+    const int ch = wgetch(_imp->window.get());
+    _imp->input_hook(ch);
+  }
   wclear(_imp->window.get());  // Suboptimal
   int width = getmaxx(_imp->window.get());
   int height = getmaxy(_imp->window.get());
@@ -149,6 +134,7 @@ void Screen::draw()
       }
     }
   }
+  wrefresh(_imp->window.get());
 }
 
 void Screen::clear()
