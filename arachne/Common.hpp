@@ -5,7 +5,7 @@
 
 namespace arachne
 {
-using IdValueType = std::size_t;
+using IdValueType = uint64_t;
 constexpr auto InvalidFibreValue = ~static_cast<IdValueType>(0);
 
 struct Id
@@ -19,5 +19,63 @@ using WaitCondition = std::function<bool()>;
 inline bool operator==(const Id &lhs, const Id &rhs) noexcept
 {
   return lhs.id == rhs.id;
+}
+
+inline uint8_t nextPowerOfTwo(uint8_t value)
+{
+  if (value <= 1)
+  {
+    return 1;
+  }
+
+  value |= value >> 1;
+  value |= value >> 2;
+  value |= value >> 4;
+  return value + 1;
+}
+
+inline uint16_t nextPowerOfTwo(uint16_t value)
+{
+  if (value <= 1)
+  {
+    return 1;
+  }
+
+  value |= value >> 1;
+  value |= value >> 2;
+  value |= value >> 4;
+  value |= value >> 8;
+  return value + 1;
+}
+
+inline uint32_t nextPowerOfTwo(uint32_t value)
+{
+  if (value <= 1)
+  {
+    return 1;
+  }
+
+  value |= value >> 1;
+  value |= value >> 2;
+  value |= value >> 4;
+  value |= value >> 8;
+  value |= value >> 16;
+  return value + 1;
+}
+
+inline uint64_t nextPowerOfTwo(uint64_t value)
+{
+  if (value <= 1)
+  {
+    return 1;
+  }
+
+  value |= value >> 1;
+  value |= value >> 2;
+  value |= value >> 4;
+  value |= value >> 8;
+  value |= value >> 16;
+  value |= value >> 32;
+  return value + 1;
 }
 }  // namespace arachne

@@ -1,5 +1,5 @@
-#include "Finally.hpp"
 #include "Scheduler.hpp"
+#include <exception>
 
 namespace arachne
 {
@@ -8,53 +8,31 @@ Scheduler::~Scheduler() = default;
 
 bool Scheduler::isRunning(const Id fibre_id) const noexcept
 {
-  return std::ranges::find_if(
-           _fibres, [fibre_id](const FibreEntry &state) { return state.id == fibre_id; }) !=
-           _fibres.end() ||
-         std::ranges::find_if(_new_fibres, [fibre_id](const FibreEntry &state) {
-           return state.id == fibre_id;
-         }) != _new_fibres.end();
+  return _fibres.contains(fibre_id);
 }
 
-Id Scheduler::start(Fibre &&fibre)
+Id Scheduler::start(Fibre &&fibre, int32_t priority, std::string_view name)
 {
-  const Id fibre_id = { .id = _next_id };
-  ++_next_id;
-  if (_next_id == InvalidFibreValue)
-  {
-    ++_next_id;
-  }
-  auto &fibre_set = (_in_update) ? _new_fibres : _fibres;
-  fibre_set.emplace_back(FibreEntry{ .id = fibre_id, .fibre = std::move(fibre) });
+  // Fibre creation assigned the ID. We need to store it before moving the fibre.
+  const Id fibre_id = fibre.id();
+  fibre.setName(name);
+  fibre.__setPriority(priority);
+  _fibres.push(std::move(fibre));
   return fibre_id;
 }
 
 bool Scheduler::cancel(const Id fibre_id)
 {
-  if (cancel(_fibres, _expiry, fibre_id) || cancel(_new_fibres, _expiry, fibre_id))
-  {
-    if (!_in_update)
-    {
-      cleanupFibres(_expiry);
-    }
-    return true;
-  }
-  return false;
+  return _fibres.cancel(fibre_id);
 }
 
 std::size_t Scheduler::cancel(std::span<const Id> fibre_ids)
 {
-  std::size_t removed = cancel(_fibres, _expiry, fibre_ids);
-  if (_expiry.indices.size() < fibre_ids.size())
+  std::size_t removed = 0;
+  for (const Id &id : fibre_ids)
   {
-    removed += cancel(_new_fibres, _expiry, fibre_ids);
+    removed += !!_fibres.cancel(id);
   }
-
-  if (!_in_update)
-  {
-    cleanupFibres(_expiry);
-  }
-
   return removed;
 }
 
@@ -65,89 +43,54 @@ void Scheduler::cancelAll()
 
 void Scheduler::update(const double epoch_time_s)
 {
-  // Mark update and setup to clear on leaving scope.
-  _in_update = true;
-  [[maybe_unused]] const auto cleanup = finally([this]() { _in_update = false; });
+  size_t fibre_count = _fibres.size();
 
   _time.dt = epoch_time_s - _time.epoch_time_s;
   _time.epoch_time_s = epoch_time_s;
-  _expiry.clear();
-  for (std::size_t idx = 0; auto &&fibre : _fibres)
+  for (size_t i = 0; i < fibre_count && !_fibres.empty(); ++i)
   {
+    auto fibre = _fibres.pop();
     // Check for resumption
-    if (fibre.cancel || fibre.fibre.resume(epoch_time_s) == Resume::Expire) [[unlikely]]
+    if (fibre.cancel())
     {
-      _expiry.indices.push_back(idx);
+      // Popped a cancelled fibre. Nothing to do.
+      continue;
     }
-    ++idx;
-  }
 
-  cleanupFibres(_expiry);
+    const Resume resume = fibre.resume(epoch_time_s);
+    if (resume.mode == ResumeMode::Expire) [[unlikely]]
+    {
+      // Expired. All done.
+      continue;
+    }
 
-  // Migrate new fibres to the main set.
-  if (!_new_fibres.empty())
-  {
-    _fibres.insert(_fibres.end(), std::make_move_iterator(_new_fibres.begin()),
-                   std::make_move_iterator(_new_fibres.end()));
-    _new_fibres.clear();
+    if (resume.mode == ResumeMode::Exception) [[unlikely]]
+    {
+      // Propagate exception and expire.
+      std::exception_ptr ex = fibre.exception();
+      // TODO: Add an option to log instead of rethrowing.
+      std::rethrow_exception(ex);
+      continue;  // Unreachable.
+    }
+
+    if (resume.reschedule) [[unlikely]]
+    {
+      const Priority reschedule = *resume.reschedule;
+      const int32_t initial_priority = fibre.priority();
+      // Update fibre priority and reinsert based on that priority.
+      fibre.__setPriority(reschedule.priority);
+      _fibres.push(std::move(fibre), reschedule.position);
+      // Update fibre count (end point) if scheduling to a later position.
+      if (reschedule.priority > initial_priority ||
+          reschedule.priority == initial_priority && reschedule.position == PriorityPosition::Back)
+      {
+        ++fibre_count;
+      }
+      continue;
+    }
+
+    // Push the fibre back for the next update.
+    _fibres.push(std::move(fibre));
   }
 }
-
-bool Scheduler::cancel(std::vector<FibreEntry> &fibres, Expiry &expiry, const Id fibre_id) const
-{
-  for (std::size_t i = 0; i < fibres.size(); ++i)
-  {
-    auto &fibre = fibres.at(i);
-    if (fibre.id == fibre_id)
-    {
-      fibre.cancel = true;
-      expiry.indices.emplace_back(i);
-      return true;
-    }
-  }
-  return false;
-}
-
-std::size_t Scheduler::cancel(std::vector<FibreEntry> &fibres, Expiry &expiry,
-                              std::span<const Id> fibre_ids) const
-{
-  std::size_t removed = 0;
-  for (std::size_t i = 0; i < fibres.size(); ++i)
-  {
-    auto &fibre = fibres.at(i);
-    if (std::ranges::find(fibre_ids, fibre.id) != fibre_ids.end())
-    {
-      fibre.cancel = true;
-      expiry.indices.emplace_back(i);
-      ++removed;
-    }
-  }
-
-  return removed;
-}
-
-void Scheduler::cleanupFibres(Expiry &expiry)
-{
-  if (expiry.indices.empty())
-  {
-    return;
-  }
-
-  auto remove_iter = expiry.indices.begin();
-  for (std::size_t i = 0; i < _fibres.size(); ++i)
-  {
-    if (remove_iter != expiry.indices.end() && i == *remove_iter)
-    {
-      ++remove_iter;
-    }
-    else
-    {
-      expiry.fibres.emplace_back(std::move(_fibres.at(i)));
-    }
-  }
-
-  std::swap(_fibres, expiry.fibres);
-  expiry.clear();
-}
-
 }  // namespace arachne

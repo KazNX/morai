@@ -3,11 +3,13 @@ target_sources(arachne
   PUBLIC
     Common.hpp
     Fibre.hpp
+    FibreQueue.hpp
     Finally.hpp
     Resumption.hpp
     Scheduler.hpp
   PRIVATE
     Fibre.cpp
+    FibreQueue.cpp
     Scheduler.cpp
 )
 

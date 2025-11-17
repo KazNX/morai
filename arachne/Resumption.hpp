@@ -7,12 +7,31 @@
 
 namespace arachne
 {
+enum class PriorityPosition : int8_t
+{
+  Front,
+  Back
+};
+
+struct Priority
+{
+  int32_t priority = 0;
+  PriorityPosition position = PriorityPosition::Back;
+};
+
 /// Return values for @c Fibre::resume(), indicating the new state of the fibre.
-enum class Resume : std::int8_t
+enum class ResumeMode : std::int8_t
 {
   Continue,  ///< Fibre continued running come code.
   Sleep,     ///< Fibre is sleeping or waiting.
-  Expire     ///< Fibre has expired and requires cleanup.
+  Expire,    ///< Fibre has expired and requires cleanup.
+  Exception  ///< An exception was raised. Expire the fibre after propagating.
+};
+
+struct Resume
+{
+  ResumeMode mode = ResumeMode::Continue;
+  std::optional<Priority> reschedule = {};
 };
 
 /// This object tells the scheduler how or when to resume a fibre.
@@ -28,6 +47,11 @@ struct Resumption
   /// Optional condition to wait on before resuming.
   WaitCondition condition = {};
 };
+
+inline Priority reschedule(int32_t priority, PriorityPosition position = PriorityPosition::Back)
+{
+  return { .priority = priority, .position = position };
+}
 
 /// A helper function for unqualified yield.
 ///

@@ -3,7 +3,10 @@
 #include "Common.hpp"
 #include "Resumption.hpp"
 
+#include <atomic>
 #include <coroutine>
+#include <exception>
+#include <optional>
 #include <utility>
 
 namespace arachne
@@ -40,12 +43,21 @@ public:
     void await_resume() noexcept {}
   };
 
+  struct RescheduleAwaitable
+  {
+    Priority value;
+    bool await_ready() const noexcept { return false; }
+    void await_suspend(std::coroutine_handle<promise_type> handle) noexcept;
+    void await_resume() noexcept {}
+  };
+
   /// Fibre @c promise_type implementation.
   struct promise_type
   {
     /// Indicates when next to resume the fibre - see @c Resumption. Note the time value is
     /// initially given as a relative time, but stored as an epoch time.
     Resumption resumption{};
+    std::optional<Priority> reschedule{};
     std::exception_ptr exception{};  ///< Exception storage.
 
     /// Convert to the owning @c Fibre object.
@@ -66,10 +78,15 @@ public:
 
     /// Yield type definition - @c Resumption.
     /// @param value Immediately stored into the @c resumption member (time still relative).
-    std::suspend_always yield_value(const Resumption &value) noexcept
+    std::suspend_always yield_value(Resumption &&value) noexcept
     {
-      resumption = value;
+      resumption = std::move(value);
       return {};
+    }
+
+    RescheduleAwaitable await_transform(Priority &&reschedule) noexcept
+    {
+      return { .value = std::move(reschedule) };
     }
 
     /// @c co_await handling for @c double sleep durations.
@@ -111,18 +128,40 @@ public:
 
   Fibre() = default;
   Fibre(std::coroutine_handle<promise_type> handle)
-    : _handle(handle)
+    : _handle{ handle }
+    , _id{ nextId() }
+    , _cancel{ false }
   {}
   Fibre(const Fibre &) = delete;
   Fibre(Fibre &&other) noexcept
     : _handle{ std::exchange(other._handle, {}) }
+    , _id{ std::exchange(other._id, InvalidFibreValue) }
+    , _name{ std::exchange(other._name, {}) }
+    , _cancel{ std::exchange(other._cancel, false) }
   {}
   Fibre &operator=(const Fibre &) = delete;
-  Fibre &operator=(Fibre &&) = default;
+  Fibre &operator=(Fibre &&other) noexcept
+  {
+    swap(other);
+    return *this;
+  }
+
   ~Fibre();
 
+  [[nodiscard]] Id id() const { return { _id }; }
+
+  [[nodiscard]] const std::string &name() const { return _name; }
+  void setName(std::string_view name) { _name = name; }
+
+  [[nodiscard]] bool cancel() const { return _cancel; }
+  void markForCancellation() { _cancel = true; }
+
+  [[nodiscard]] int32_t priority() const { return _priority; }
+
+  void __setPriority(int32_t p) { _priority = p; }
+
   /// Check if the fibre has completed execution.
-  [[nodiscard]] bool done() const noexcept { return !_handle || _handle.done(); }
+  [[nodiscard]] bool done() const noexcept { return !_handle || _handle.done() || _cancel; }
 
   /// Attempt to resume fibre execution.
   ///
@@ -146,7 +185,56 @@ public:
   /// @c Fibre.
   [[nodiscard]] Resume resume(const double epoch_time_s) noexcept;
 
+  std::exception_ptr exception() const noexcept
+  {
+    return _handle ? _handle.promise().exception : nullptr;
+  }
+
+  void swap(Fibre &other) noexcept
+  {
+    std::swap(_handle, other._handle);
+    std::swap(_id, other._id);
+    std::swap(_priority, other._priority);
+    std::swap(_name, other._name);
+    std::swap(_cancel, other._cancel);
+  }
+
 private:
+  [[nodiscard]] static IdValueType nextId()
+  {
+    IdValueType id = _next_id++;
+    if (id == InvalidFibreValue) [[unlikely]]
+    {
+      id = _next_id++;
+    }
+    return id;
+  }
+
   std::coroutine_handle<promise_type> _handle;
+  IdValueType _id = InvalidFibreValue;
+  int32_t _priority = 0;
+  std::string _name;
+  bool _cancel = true;
+
+  static std::atomic<IdValueType> _next_id;
 };
 }  // namespace arachne
+
+
+namespace std
+{
+template <>
+struct less<arachne::Fibre>
+{
+  bool operator()(const arachne::Fibre &a, const arachne::Fibre &b) const
+  {
+    return a.priority() < b.priority();
+  }
+};
+
+template <>
+inline void swap(arachne::Fibre &a, arachne::Fibre &b) noexcept
+{
+  a.swap(b);
+}
+}  // namespace std

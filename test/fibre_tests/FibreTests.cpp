@@ -18,7 +18,7 @@ Fibre ticker()
 TEST(Fibre, ticker)
 {
   Scheduler scheduler;
-  Id fibre_id = scheduler.start(ticker());
+  Id fibre_id = scheduler.start(ticker(), "ticker");
 
   const double dt = 0.1;
   double simulated_time_s = 0;
@@ -53,7 +53,7 @@ TEST(Fibre, cancellation)
 {
   Scheduler scheduler;
   bool cleaned_up = false;
-  Id fibre_id = scheduler.start(cancellation(&cleaned_up));
+  Id fibre_id = scheduler.start(cancellation(&cleaned_up), "cancellation");
 
   const double dt = 0.1;
   double simulated_time_s = 0;
@@ -99,8 +99,8 @@ TEST(Fibre, await)
     state.waiter_end_time = state.time;
   };
 
-  scheduler.start(waiter_fibre());
-  scheduler.start(signaller_fibre());
+  scheduler.start(waiter_fibre(), "waiter");
+  scheduler.start(signaller_fibre(), "signaller");
 
   const auto update_dt = 0.01;
   for (state.time = 0; state.time < 1.0 && !scheduler.empty(); state.time += update_dt)
@@ -125,8 +125,8 @@ TEST(Fibre, spawn)
 
   auto parent_fibre = [&scheduler, &child_fibre]() -> Fibre {
     std::cout << "Parent fibre started\n";
-    Id child1 = scheduler.start(child_fibre(1));
-    Id child2 = scheduler.start(child_fibre(2));
+    Id child1 = scheduler.start(child_fibre(1), "child1");
+    Id child2 = scheduler.start(child_fibre(2), "child2");
 
     co_await scheduler.await(child1);
     co_await scheduler.await(child2);
@@ -137,7 +137,7 @@ TEST(Fibre, spawn)
     std::cout << "Parent fibre done\n";
   };
 
-  Id parent_id = scheduler.start(parent_fibre());
+  Id parent_id = scheduler.start(parent_fibre(), "parent");
 
   const double dt = 0.1;
   double simulated_time_s = 0;
@@ -175,8 +175,8 @@ TEST(Fibre, spawnAndCancel)
 
   auto parent_fibre = [&scheduler, &child_fibre]() -> Fibre {
     std::cout << "Parent fibre started\n";
-    Id child1 = scheduler.start(child_fibre(1, true));
-    Id child2 = scheduler.start(child_fibre(2, false));
+    Id child1 = scheduler.start(child_fibre(1, true), "child1");
+    Id child2 = scheduler.start(child_fibre(2, false), "child2");
 
     co_await scheduler.await(child2);
 
@@ -187,8 +187,8 @@ TEST(Fibre, spawnAndCancel)
     std::cout << "Parent fibre done\n";
   };
 
-  Id parent_id = scheduler.start(parent_fibre());
-  Id persistent_id = scheduler.start(child_fibre(99, true));
+  Id parent_id = scheduler.start(parent_fibre(), "parent");
+  Id persistent_id = scheduler.start(child_fibre(99, true), "persistent");
 
   const double dt = 0.1;
   double simulated_time_s = 0;
@@ -203,5 +203,64 @@ TEST(Fibre, spawnAndCancel)
   EXPECT_TRUE(scheduler.isRunning(persistent_id));
   scheduler.cancelAll();
   EXPECT_TRUE(scheduler.empty());
+}
+
+TEST(Fibre, exceptionPropagation)
+{
+  Scheduler scheduler;
+
+  auto faulty_fibre = []() -> Fibre {
+    std::cout << "Faulty fibre started\n";
+    co_yield {};
+    throw std::runtime_error("Something went wrong in the fibre");
+    co_yield {};
+  };
+
+  Id fibre_id = scheduler.start(faulty_fibre(), "faulty");
+
+  const double dt = 0.1;
+  double simulated_time_s = 0;
+  EXPECT_TRUE(scheduler.isRunning(fibre_id));
+  bool exception_caught = false;
+  while (scheduler.isRunning(fibre_id))
+  {
+    try
+    {
+      scheduler.update(simulated_time_s);
+    }
+    catch (const std::runtime_error &e)
+    {
+      std::cout << "Caught exception from fibre: " << e.what() << '\n';
+      exception_caught = true;
+    }
+    simulated_time_s += dt;
+  }
+
+  EXPECT_FALSE(scheduler.isRunning(fibre_id));
+  EXPECT_TRUE(exception_caught);
+}
+
+TEST(Fibre, priority)
+{
+  Scheduler scheduler;
+  std::vector<int> execution_order;
+
+  auto fibre_fn = [&execution_order](int id) -> Fibre {
+    std::cout << "Fibre " << id << " started\n";
+    execution_order.push_back(id);
+    co_yield {};
+    std::cout << "Fibre " << id << " done\n";
+  };
+
+  scheduler.start(fibre_fn(1), 300, "fibre1");  // Lower priority
+  scheduler.start(fibre_fn(2), 100, "fibre2");  // Higher priority
+  scheduler.start(fibre_fn(3), 200, "fibre3");  // Medium priority
+
+  scheduler.update(0);
+  scheduler.update(1);
+
+  // Expect fibres to execute in order of priority: 2, 3, 1
+  const std::vector<int> expected_order = { 2, 3, 1 };
+  EXPECT_EQ(execution_order, expected_order);
 }
 }  // namespace arachne

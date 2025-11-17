@@ -2,9 +2,10 @@
 
 #include "Common.hpp"
 #include "Fibre.hpp"
+#include "FibreQueue.hpp"
 
 #include <span>
-#include <vector>
+#include <string_view>
 
 namespace arachne
 {
@@ -14,7 +15,7 @@ struct Time
   double dt = 0.0;
 };
 
-/// Implements a fibre management and update scheduler for fibres - sometimes known as microthreads.
+/// Implements a single threaded fibre scheduler.
 ///
 /// The fibre @c Scheduler implements cooperative multitasking in a single thread. Fibres are
 /// written as C++20 coroutines. There are two requirements for implementing a fibre entrypoint:
@@ -113,7 +114,12 @@ public:
   ///
   /// @param fibre The fibre entry point.
   /// @return The fibre @c Id. Maybe used for cancellation or @c await().
-  Id start(Fibre &&fibre);
+  Id start(Fibre &&fibre, int32_t priority = 0, std::string_view name = {});
+  Id start(Fibre &&fibre, std::string_view name)
+  {
+    return start(std::move(fibre), 0, std::move(name));
+  }
+
   /// Cancel a running fibre by @c Id.
   /// @param fibre_id @c Id of the fibre to cancel.
   /// @return True if a fibre matching the @p fibre_id was found an cancelled.
@@ -142,36 +148,9 @@ public:
   void update(double epoch_time_s);
 
 private:
-  struct FibreEntry
-  {
-    Id id = InvalidFibre;
-    Fibre fibre;
-    bool cancel = false;
-  };
-
-  struct Expiry
-  {
-    std::vector<std::size_t> indices;
-    std::vector<FibreEntry> fibres;
-
-    void clear()
-    {
-      indices.clear();
-      fibres.clear();
-    }
-  };
-
-  bool cancel(std::vector<FibreEntry> &fibres, Expiry &expiry, Id fibre_id) const;
-  std::size_t cancel(std::vector<FibreEntry> &fibres, Expiry &expiry,
-                     std::span<const Id> fibre_ids) const;
-  void cleanupFibres(Expiry &expiry);
-
-  std::vector<FibreEntry> _fibres{};
+  FibreQueue _fibres;
   /// Fibres added during an update. Migrated at the end of the update.
-  std::vector<FibreEntry> _new_fibres{};
   IdValueType _next_id = 0u;
-  Expiry _expiry{};
   Time _time{};
-  bool _in_update = false;
 };
 }  // namespace arachne
