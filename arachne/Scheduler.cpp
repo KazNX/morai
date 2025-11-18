@@ -1,5 +1,7 @@
 #include "Scheduler.hpp"
 #include <exception>
+#include "arachne/Fibre.hpp"
+#include "arachne/FibreQueue.hpp"
 
 namespace arachne
 {
@@ -8,7 +10,7 @@ Scheduler::~Scheduler() = default;
 
 bool Scheduler::isRunning(const Id fibre_id) const noexcept
 {
-  return _fibres.contains(fibre_id);
+  return _fibre_queues[0].contains(fibre_id) || _fibre_queues[1].contains(fibre_id);
 }
 
 Id Scheduler::start(Fibre &&fibre, int32_t priority, std::string_view name)
@@ -17,13 +19,14 @@ Id Scheduler::start(Fibre &&fibre, int32_t priority, std::string_view name)
   const Id fibre_id = fibre.id();
   fibre.setName(name);
   fibre.__setPriority(priority);
-  _fibres.push(std::move(fibre));
+  FibreQueue &fibres = activeQueue();
+  fibres.push(std::move(fibre));
   return fibre_id;
 }
 
 bool Scheduler::cancel(const Id fibre_id)
 {
-  return _fibres.cancel(fibre_id);
+  return _fibre_queues[0].cancel(fibre_id) || _fibre_queues[1].cancel(fibre_id);
 }
 
 std::size_t Scheduler::cancel(std::span<const Id> fibre_ids)
@@ -31,25 +34,29 @@ std::size_t Scheduler::cancel(std::span<const Id> fibre_ids)
   std::size_t removed = 0;
   for (const Id &id : fibre_ids)
   {
-    removed += !!_fibres.cancel(id);
+    removed += !!cancel(id);
   }
   return removed;
 }
 
 void Scheduler::cancelAll()
 {
-  _fibres.clear();
+  _fibre_queues[0].clear();
+  _fibre_queues[1].clear();
 }
 
 void Scheduler::update(const double epoch_time_s)
 {
-  size_t fibre_count = _fibres.size();
+  FibreQueue &update_queue = activeQueue();
+  FibreQueue &next_queue = inactiveQueue();
+  // Swap queues now for any pushes during update.
+  swapQueues();
 
   _time.dt = epoch_time_s - _time.epoch_time_s;
   _time.epoch_time_s = epoch_time_s;
-  for (size_t i = 0; i < fibre_count && !_fibres.empty(); ++i)
+  while (!update_queue.empty())
   {
-    auto fibre = _fibres.pop();
+    Fibre fibre = update_queue.pop();
     // Check for resumption
     if (fibre.cancel())
     {
@@ -79,18 +86,12 @@ void Scheduler::update(const double epoch_time_s)
       const int32_t initial_priority = fibre.priority();
       // Update fibre priority and reinsert based on that priority.
       fibre.__setPriority(reschedule.priority);
-      _fibres.push(std::move(fibre), reschedule.position);
-      // Update fibre count (end point) if scheduling to a later position.
-      if (reschedule.priority > initial_priority ||
-          reschedule.priority == initial_priority && reschedule.position == PriorityPosition::Back)
-      {
-        ++fibre_count;
-      }
+      next_queue.push(std::move(fibre), reschedule.position);
       continue;
     }
 
     // Push the fibre back for the next update.
-    _fibres.push(std::move(fibre));
+    next_queue.push(std::move(fibre));
   }
 }
 }  // namespace arachne

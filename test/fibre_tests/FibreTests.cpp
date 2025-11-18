@@ -3,6 +3,11 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <array>
+#include <ranges>
+#include <random>
+
 namespace arachne
 {
 Fibre ticker()
@@ -13,6 +18,15 @@ Fibre ticker()
     co_yield {};
   }
   std::cout << "Tick done\n";
+}
+
+TEST(Fibre, cancelUnknown)
+{
+  Scheduler scheduler;
+  Id unknown_id{ 9999 };
+
+  EXPECT_FALSE(scheduler.isRunning(unknown_id));
+  EXPECT_FALSE(scheduler.cancel(unknown_id));
 }
 
 TEST(Fibre, ticker)
@@ -240,27 +254,73 @@ TEST(Fibre, exceptionPropagation)
   EXPECT_TRUE(exception_caught);
 }
 
-TEST(Fibre, priority)
+void priorityTest(std::span<std::pair<int32_t, int32_t>> id_priority_pairs, bool log = false)
 {
   Scheduler scheduler;
-  std::vector<int> execution_order;
+  std::vector<int32_t> execution_order;
+  std::vector<int32_t> shutdown_order;
 
-  auto fibre_fn = [&execution_order](int id) -> Fibre {
-    std::cout << "Fibre " << id << " started\n";
-    execution_order.push_back(id);
+  auto fibre_entry = [&execution_order, &shutdown_order, log](const int32_t id) -> Fibre {
+    if (log)
+    {
+      std::cout << "Fibre " << id << " started\n";
+    }
+    execution_order.emplace_back(id);
     co_yield {};
-    std::cout << "Fibre " << id << " done\n";
+    if (log)
+    {
+      std::cout << "Fibre " << id << " done\n";
+    }
+    shutdown_order.emplace_back(id);
   };
 
-  scheduler.start(fibre_fn(1), 300, "fibre1");  // Lower priority
-  scheduler.start(fibre_fn(2), 100, "fibre2");  // Higher priority
-  scheduler.start(fibre_fn(3), 200, "fibre3");  // Medium priority
+  for (const auto &id_priority_pair : id_priority_pairs)
+  {
+    scheduler.start(fibre_entry(id_priority_pair.first), id_priority_pair.second,
+                    std::format("fibre{}", id_priority_pair.first));
+  }
 
   scheduler.update(0);
   scheduler.update(1);
 
-  // Expect fibres to execute in order of priority: 2, 3, 1
-  const std::vector<int> expected_order = { 2, 3, 1 };
+  // Resolve the expected order.
+  std::ranges::sort(id_priority_pairs,
+                    [](const auto &a, const auto &b) { return a.second < b.second; });
+
+  // Expect fibres to execute in order of priority.
+  std::vector<int32_t> expected_order;
+  for (const auto idx :
+       id_priority_pairs | std::views::transform([](const auto &pair) { return pair.first; }))
+  {
+    expected_order.emplace_back(idx);
+  }
   EXPECT_EQ(execution_order, expected_order);
+}
+
+TEST(Fibre, priority)
+{
+  std::array priorities{ std::pair<int, int>{ 0, 300 }, std::pair<int, int>{ 1, 100 },
+                         std::pair<int, int>{ 2, 400 }, std::pair<int, int>{ 3, -200 },
+                         std::pair<int, int>{ 4, 0 },   std::pair<int, int>{ 5, 150 }
+
+  };
+  priorityTest(priorities, true);
+}
+
+TEST(Fibre, randomPriority)
+{
+  const int32_t fibre_count = 33u;
+  std::vector<std::pair<int32_t, int32_t>> priorities;
+  priorities.reserve(fibre_count);
+
+  std::mt19937 rng(42);
+  std::uniform_int_distribution<> dist(-10, 50);
+  for (int32_t i = 0; i < fibre_count; ++i)
+  {
+    const int32_t priority = dist(rng) * 10;
+    priorities.emplace_back(i, priority);
+  }
+
+  priorityTest(priorities);
 }
 }  // namespace arachne

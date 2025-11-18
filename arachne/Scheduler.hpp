@@ -4,6 +4,7 @@
 #include "Fibre.hpp"
 #include "FibreQueue.hpp"
 
+#include <array>
 #include <span>
 #include <string_view>
 
@@ -89,9 +90,12 @@ public:
   ~Scheduler();
 
   /// Returns true if there are no running fibres.
-  [[nodiscard]] bool empty() const noexcept { return _fibres.empty(); }
+  [[nodiscard]] bool empty() const noexcept { return runningCount() == 0; }
   /// Returns the number of running fibres regardless of suspended state.
-  [[nodiscard]] std::size_t runningCount() const noexcept { return _fibres.size(); }
+  [[nodiscard]] std::size_t runningCount() const noexcept
+  {
+    return _fibre_queues[0].size() + _fibre_queues[1].size();
+  }
   /// Check if there is a fibre running with the given ID.
   [[nodiscard]] bool isRunning(Id fibre_id) const noexcept;
 
@@ -148,7 +152,12 @@ public:
   void update(double epoch_time_s);
 
 private:
-  FibreQueue _fibres;
+  FibreQueue &activeQueue() noexcept { return _fibre_queues[_active_queue]; }
+  FibreQueue &inactiveQueue() noexcept { return _fibre_queues[1 - _active_queue]; }
+  void swapQueues() noexcept { _active_queue = 1 - _active_queue; }
+
+  std::array<FibreQueue, 2> _fibre_queues{ FibreQueue{}, FibreQueue{} };
+  int32_t _active_queue = 0;
   /// Fibres added during an update. Migrated at the end of the update.
   IdValueType _next_id = 0u;
   Time _time{};
