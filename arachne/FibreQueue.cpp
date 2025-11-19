@@ -76,16 +76,16 @@ Fibre FibreQueue::pop()
 void FibreQueue::grow()
 {
   std::vector<Fibre> new_buffer(_buffer.size() * 2);
-  uint64_t new_tail = 0u;
+  uint64_t new_head = 0u;
   while (!empty())
   {
-    new_buffer.at(new_tail++) = pop();
+    new_buffer.at(new_head++) = pop();
   }
   _buffer.clear();
 
   std::swap(_buffer, new_buffer);
-  _head = 0u;
-  _tail = new_tail;
+  _head = new_head;
+  _tail = 0u;
 }
 
 

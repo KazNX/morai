@@ -19,7 +19,7 @@ struct Time
 
 struct SchedulerParams
 {
-  uint64_t initial_queue_capacity = 1024u;
+  uint64_t initial_queue_size = 1024u;
   std::vector<int32_t> priority_levels{};
 };
 

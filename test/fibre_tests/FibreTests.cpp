@@ -254,9 +254,11 @@ TEST(Fibre, exceptionPropagation)
   EXPECT_TRUE(exception_caught);
 }
 
-void priorityTest(std::span<const std::pair<int32_t, int32_t>> id_priority_pairs, bool log = false)
+void priorityTest(std::span<const std::pair<int32_t, int32_t>> id_priority_pairs,
+                  bool const log = false, const uint32_t queue_size = 1024u)
 {
   SchedulerParams params;
+  params.initial_queue_size = queue_size;
   for (const auto &pair : id_priority_pairs)
   {
     if (std::ranges::find(params.priority_levels, pair.second) == params.priority_levels.end())
@@ -318,7 +320,7 @@ TEST(Fibre, priority)
 
 TEST(Fibre, randomPriority)
 {
-  const int32_t fibre_count = 33u;
+  const int32_t fibre_count = 20'000u;  // Large enough that at least one queue will resize.
   std::vector<std::pair<int32_t, int32_t>> priorities;
   priorities.reserve(fibre_count);
 
@@ -330,6 +332,39 @@ TEST(Fibre, randomPriority)
     priorities.emplace_back(i, priority);
   }
 
-  priorityTest(priorities);
+  priorityTest(priorities, false);
+}
+
+TEST(Fibre, queueResize)
+{
+  const uint32_t queue_size = 4u;
+  SchedulerParams params = { .initial_queue_size = queue_size };
+  Scheduler scheduler{ std::move(params) };
+
+  struct SharedState
+  {
+    uint32_t entered = 0;
+    uint32_t completed = 0;
+  } state;
+
+  const auto fibre_entry = [](SharedState &state) -> Fibre {
+    state.entered++;
+    co_yield {};
+    state.completed++;
+  };
+
+  const uint32_t fibre_count = queue_size * 4;
+  for (uint32_t i = 0; i < fibre_count; ++i)
+  {
+    scheduler.start(fibre_entry(state), std::format("fibre{}", i));
+  }
+
+  double elapsed = 0;
+  const double dt = 0.1;
+  scheduler.update(elapsed += dt);
+  EXPECT_EQ(state.entered, fibre_count);
+  EXPECT_EQ(state.completed, 0u);
+  scheduler.update(elapsed += dt);
+  EXPECT_EQ(state.completed, fibre_count);
 }
 }  // namespace arachne

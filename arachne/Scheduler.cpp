@@ -18,7 +18,7 @@ Scheduler::Scheduler(SchedulerParams params)
 
   for (const int32_t priority_level : params.priority_levels)
   {
-    _fibre_queues.emplace_back(priority_level, params.initial_queue_capacity);
+    _fibre_queues.emplace_back(priority_level, params.initial_queue_size);
   }
 }
 
