@@ -32,7 +32,7 @@ TEST(Fibre, cancelUnknown)
 TEST(Fibre, ticker)
 {
   Scheduler scheduler;
-  Id fibre_id = scheduler.start(ticker(), "ticker");
+  const Id fibre_id = scheduler.start(ticker(), "ticker");
 
   const double dt = 0.1;
   double simulated_time_s = 0;
@@ -67,7 +67,7 @@ TEST(Fibre, cancellation)
 {
   Scheduler scheduler;
   bool cleaned_up = false;
-  Id fibre_id = scheduler.start(cancellation(&cleaned_up), "cancellation");
+  const Id fibre_id = scheduler.start(cancellation(&cleaned_up), "cancellation");
 
   const double dt = 0.1;
   double simulated_time_s = 0;
@@ -131,13 +131,13 @@ TEST(Fibre, spawn)
 {
   Scheduler scheduler;
 
-  auto child_fibre = [](int id) -> Fibre {
+  const auto child_fibre = [](int id) -> Fibre {
     std::cout << "Child fibre " << id << " started\n";
     co_yield {};
     std::cout << "Child fibre " << id << " done\n";
   };
 
-  auto parent_fibre = [&scheduler, &child_fibre]() -> Fibre {
+  const auto parent_fibre = [&scheduler, &child_fibre]() -> Fibre {
     std::cout << "Parent fibre started\n";
     Id child1 = scheduler.start(child_fibre(1), "child1");
     Id child2 = scheduler.start(child_fibre(2), "child2");
@@ -171,7 +171,7 @@ TEST(Fibre, spawnAndCancel)
 {
   Scheduler scheduler;
 
-  auto child_fibre = [](int id, bool persist = false) -> Fibre {
+  const auto child_fibre = [](int id, bool persist = false) -> Fibre {
     std::cout << std::format("Child fibre {} started - persist {}\n", id, persist);
     if (persist)
     {
@@ -187,7 +187,7 @@ TEST(Fibre, spawnAndCancel)
     std::cout << "Child fibre " << id << " done\n";
   };
 
-  auto parent_fibre = [&scheduler, &child_fibre]() -> Fibre {
+  const auto parent_fibre = [&scheduler, &child_fibre]() -> Fibre {
     std::cout << "Parent fibre started\n";
     Id child1 = scheduler.start(child_fibre(1, true), "child1");
     Id child2 = scheduler.start(child_fibre(2, false), "child2");
@@ -201,8 +201,8 @@ TEST(Fibre, spawnAndCancel)
     std::cout << "Parent fibre done\n";
   };
 
-  Id parent_id = scheduler.start(parent_fibre(), "parent");
-  Id persistent_id = scheduler.start(child_fibre(99, true), "persistent");
+  const Id parent_id = scheduler.start(parent_fibre(), "parent");
+  const Id persistent_id = scheduler.start(child_fibre(99, true), "persistent");
 
   const double dt = 0.1;
   double simulated_time_s = 0;
@@ -223,14 +223,14 @@ TEST(Fibre, exceptionPropagation)
 {
   Scheduler scheduler;
 
-  auto faulty_fibre = []() -> Fibre {
+  const auto faulty_fibre = []() -> Fibre {
     std::cout << "Faulty fibre started\n";
     co_yield {};
     throw std::runtime_error("Something went wrong in the fibre");
     co_yield {};
   };
 
-  Id fibre_id = scheduler.start(faulty_fibre(), "faulty");
+  const Id fibre_id = scheduler.start(faulty_fibre(), "faulty");
 
   const double dt = 0.1;
   double simulated_time_s = 0;
@@ -254,13 +254,31 @@ TEST(Fibre, exceptionPropagation)
   EXPECT_TRUE(exception_caught);
 }
 
-void priorityTest(std::span<std::pair<int32_t, int32_t>> id_priority_pairs, bool log = false)
+void priorityTest(std::span<const std::pair<int32_t, int32_t>> id_priority_pairs, bool log = false)
 {
-  Scheduler scheduler;
+  SchedulerParams params;
+  for (const auto &pair : id_priority_pairs)
+  {
+    if (std::ranges::find(params.priority_levels, pair.second) == params.priority_levels.end())
+    {
+      params.priority_levels.emplace_back(pair.second);
+    }
+  }
+
+  // Resolve the expected order.
+  std::vector<int32_t> expected_order;
+  for (const auto idx :
+       id_priority_pairs | std::views::transform([](const auto &pair) { return pair.first; }))
+  {
+    expected_order.emplace_back(idx);
+  }
+  std::ranges::sort(expected_order);
+
+  Scheduler scheduler{ std::move(params) };
   std::vector<int32_t> execution_order;
   std::vector<int32_t> shutdown_order;
 
-  auto fibre_entry = [&execution_order, &shutdown_order, log](const int32_t id) -> Fibre {
+  const auto fibre_entry = [&execution_order, &shutdown_order, log](const int32_t id) -> Fibre {
     if (log)
     {
       std::cout << "Fibre " << id << " started\n";
@@ -274,6 +292,8 @@ void priorityTest(std::span<std::pair<int32_t, int32_t>> id_priority_pairs, bool
     shutdown_order.emplace_back(id);
   };
 
+  auto insert_validation = [&expected_order, &scheduler]() { return !expected_order.empty(); };
+
   for (const auto &id_priority_pair : id_priority_pairs)
   {
     scheduler.start(fibre_entry(id_priority_pair.first), id_priority_pair.second,
@@ -283,17 +303,6 @@ void priorityTest(std::span<std::pair<int32_t, int32_t>> id_priority_pairs, bool
   scheduler.update(0);
   scheduler.update(1);
 
-  // Resolve the expected order.
-  std::ranges::sort(id_priority_pairs,
-                    [](const auto &a, const auto &b) { return a.second < b.second; });
-
-  // Expect fibres to execute in order of priority.
-  std::vector<int32_t> expected_order;
-  for (const auto idx :
-       id_priority_pairs | std::views::transform([](const auto &pair) { return pair.first; }))
-  {
-    expected_order.emplace_back(idx);
-  }
   EXPECT_EQ(execution_order, expected_order);
 }
 
@@ -314,10 +323,10 @@ TEST(Fibre, randomPriority)
   priorities.reserve(fibre_count);
 
   std::mt19937 rng(42);
-  std::uniform_int_distribution<> dist(-10, 50);
+  std::uniform_int_distribution<> dist(-2, 5);
   for (int32_t i = 0; i < fibre_count; ++i)
   {
-    const int32_t priority = dist(rng) * 10;
+    const int32_t priority = dist(rng) * 100;
     priorities.emplace_back(i, priority);
   }
 

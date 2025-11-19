@@ -3,6 +3,7 @@
 #include "Common.hpp"
 #include "Fibre.hpp"
 #include "FibreQueue.hpp"
+#include "arachne/Fibre.hpp"
 
 #include <array>
 #include <span>
@@ -14,6 +15,12 @@ struct Time
 {
   double epoch_time_s = 0.0;
   double dt = 0.0;
+};
+
+struct SchedulerParams
+{
+  uint64_t initial_queue_capacity = 1024u;
+  std::vector<int32_t> priority_levels{};
 };
 
 /// Implements a single threaded fibre scheduler.
@@ -86,7 +93,7 @@ struct Time
 class Scheduler
 {
 public:
-  Scheduler();
+  Scheduler(SchedulerParams params = {});
   ~Scheduler();
 
   /// Returns true if there are no running fibres.
@@ -94,7 +101,12 @@ public:
   /// Returns the number of running fibres regardless of suspended state.
   [[nodiscard]] std::size_t runningCount() const noexcept
   {
-    return _fibre_queues[0].size() + _fibre_queues[1].size();
+    std::size_t count = 0;
+    for (const auto &queue : _fibre_queues)
+    {
+      count += queue.size();
+    }
+    return count;
   }
   /// Check if there is a fibre running with the given ID.
   [[nodiscard]] bool isRunning(Id fibre_id) const noexcept;
@@ -152,12 +164,10 @@ public:
   void update(double epoch_time_s);
 
 private:
-  FibreQueue &activeQueue() noexcept { return _fibre_queues[_active_queue]; }
-  FibreQueue &inactiveQueue() noexcept { return _fibre_queues[1 - _active_queue]; }
-  void swapQueues() noexcept { _active_queue = 1 - _active_queue; }
+  FibreQueue &selectQueue(int32_t priority);
+  void updateQueue(double epoch_time_s, FibreQueue &queue);
 
-  std::array<FibreQueue, 2> _fibre_queues{ FibreQueue{}, FibreQueue{} };
-  int32_t _active_queue = 0;
+  std::vector<FibreQueue> _fibre_queues;
   /// Fibres added during an update. Migrated at the end of the update.
   IdValueType _next_id = 0u;
   Time _time{};

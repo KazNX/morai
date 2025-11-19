@@ -62,8 +62,45 @@ cmake --build build --config Release -j
 
 - [ ] Usage examples
 - [ ] Features to consider
-  - [ ] Scheduling priority
-    - [ ] Set on create
-    - [ ] Adjustable
+  - [x] Scheduling priority
+    - [x] Set on create
+    - [x] Allocated fixed priority queues in the scheduler
+    - [x] Move fibres to nearest, lower bound priority
+    - [x] Allow head insertion in fibre queues.
   - [ ] Reschedule yield statement - update again on a cycle
-  - [ ] Deliberate update request by fibre ID(s)
+  - [ ] Multi-threaded
+    - [ ] Priority queues, task based scheduler
+      - Each thread picks up a fibre, runs one update cycle, back to job pool
+      - Likely no head insertion
+  - [ ] Cross thread scheduling
+    - Multiple schedulers, one per thread
+    - Fibre can elect to move between threads via `co_await move_to_scheduler(...);`
+      - Could be on same thread, but works across threads
+  - [ ] Await multiple fibres
+  - [ ] Fibre "synchronisation"
+    - [ ] Event objects like thread condition variables
+    - [ ] Barrier
+    - [ ] Latch
+    - [ ] Semaphore
+  - [ ] Logging interface
+
+Priority scheduling requirements
+
+- Ordered insertion of new fibres
+- Removal and re-reinsertion of fibre during update loop
+- Priority insertion of fibres during update loop
+- Skip cancelled fibres during update loop
+
+Options:
+
+- Single fibre list, mutable during update iteration
+- Multiple, mutable fibre lists (binned?)
+- Immutable update list
+  - Defer removal
+  - Defer insertion
+  - Integrate rescheduling
+- Fibre queue based update
+  - pop fibre
+  - update
+  - reinsert
+  - stop when scheduling priority is lower than the last updated fibre

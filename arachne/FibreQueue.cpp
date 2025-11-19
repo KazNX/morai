@@ -6,12 +6,16 @@
 
 namespace arachne
 {
-FibreQueue::FibreQueue(uint64_t capacity)
+FibreQueue::FibreQueue(int32_t priority, uint64_t capacity)
+  : _priority(priority)
 {
   capacity = std::max<uint64_t>(capacity, 16u);
   capacity = nextPowerOfTwo(capacity);
   _buffer.resize(capacity);
 }
+
+FibreQueue::FibreQueue(FibreQueue &&other) noexcept = default;
+FibreQueue &FibreQueue::operator=(FibreQueue &&other) noexcept = default;
 
 FibreQueue::~FibreQueue()
 {
@@ -37,49 +41,24 @@ bool FibreQueue::contains(const Id &id) const
 
 void FibreQueue::push(Fibre &&fibre, PriorityPosition position)
 {
-  // TODO: primary insertion.
-  uint64_t next_head = nextIndex(_head);
-  if (next_head == _tail)
+  if (full())
   {
     grow();
-    next_head = nextIndex(_head);
   }
 
-  // Handle priority insertion.
-  if (empty() || fibre.priority() > _buffer.at(priorIndex(_head)).priority() ||
-      fibre.priority() == _buffer.at(priorIndex(_head)).priority() &&
-        position == PriorityPosition::Back)
+  if (position == PriorityPosition::Back)
   {
-    // Normal insertion at head.
+    const uint64_t insert_index = nextIndex(_head);
+
     _buffer.at(_head) = std::move(fibre);
-    _head = next_head;
+    _head = insert_index;
     return;
   }
 
-  // Priority insertion. Find insertion point.
-  uint64_t insert_index = _tail;
-  while (insert_index != _head)
-  {
-    if (fibre.priority() < _buffer.at(insert_index).priority() ||
-        fibre.priority() == _buffer.at(insert_index).priority() &&
-          position == PriorityPosition::Front)
-    {
-      break;
-    }
-    insert_index = nextIndex(insert_index);
-  }
-
-  // Shift items up to make space.
-  uint64_t current_index = _head;
-  while (current_index != insert_index)
-  {
-    uint64_t prior_index = priorIndex(current_index);
-    std::swap(_buffer.at(current_index), _buffer.at(prior_index));
-    current_index = prior_index;
-  }
-
+  // Tail/front insertion.
+  uint64_t insert_index = priorIndex(_tail);
   _buffer.at(insert_index) = std::move(fibre);
-  _head = next_head;
+  _tail = insert_index;
 }
 
 Fibre FibreQueue::pop()
@@ -90,7 +69,7 @@ Fibre FibreQueue::pop()
   }
 
   Fibre fibre = std::move(_buffer[_tail]);
-  _tail = (_tail + 1) & (_buffer.size() - 1);
+  _tail = nextIndex(_tail);
   return fibre;
 }
 
