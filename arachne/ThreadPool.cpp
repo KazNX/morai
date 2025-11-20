@@ -9,6 +9,7 @@
 namespace arachne
 {
 ThreadPool::ThreadPool(ThreadPoolParams params)
+  : _idle_sleep_duration(params.idle_sleep_duration)
 {
   createQueues(params);
   startWorkers(params);
@@ -81,6 +82,18 @@ void ThreadPool::update(std::chrono::milliseconds time_slice)
       break;
     }
   }
+}
+
+bool ThreadPool::wait(std::optional<std::chrono::milliseconds> timeout)
+{
+  const auto target_end_time = timeout.has_value() ? std::chrono::steady_clock::now() + *timeout :
+                                                     std::chrono::steady_clock::time_point::max();
+  while (!empty() && std::chrono::steady_clock::now() < target_end_time)
+  {
+    std::this_thread::sleep_for(_idle_sleep_duration);
+  }
+
+  return empty();
 }
 
 SharedQueue &ThreadPool::selectQueue(int32_t priority)

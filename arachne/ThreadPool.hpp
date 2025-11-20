@@ -73,6 +73,8 @@ public:
   /// Have this (main) thread join in the scheduling for at least the given time slice.
   void update(std::chrono::milliseconds time_slice);
 
+  bool wait(std::optional<std::chrono::milliseconds> timeout = std::nullopt);
+
 private:
   SharedQueue &selectQueue(int32_t priority);
   void pushFibre(Fibre &&fibre);
@@ -88,5 +90,6 @@ private:
   std::vector<std::jthread> _workers;
   std::atomic_flag _paused = ATOMIC_FLAG_INIT;
   std::atomic_flag _quit = ATOMIC_FLAG_INIT;
+  std::chrono::milliseconds _idle_sleep_duration{ 1 };
 };
 }  // namespace arachne

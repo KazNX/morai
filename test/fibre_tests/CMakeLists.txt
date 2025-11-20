@@ -1,5 +1,6 @@
 add_executable(fibre_tests
   FibreTests.cpp
+  ThreadPoolTests.cpp
 )
 
 target_link_libraries(fibre_tests
