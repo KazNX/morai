@@ -33,7 +33,7 @@ struct SchedulerParams
   std::vector<int32_t> priority_levels{};
 };
 
-inline uint8_t nextPowerOfTwo(uint8_t value)
+constexpr uint8_t nextPowerOfTwo(uint8_t value)
 {
   if (value <= 1)
   {
@@ -46,7 +46,7 @@ inline uint8_t nextPowerOfTwo(uint8_t value)
   return value + 1;
 }
 
-inline uint16_t nextPowerOfTwo(uint16_t value)
+constexpr uint16_t nextPowerOfTwo(uint16_t value)
 {
   if (value <= 1)
   {
@@ -60,7 +60,7 @@ inline uint16_t nextPowerOfTwo(uint16_t value)
   return value + 1;
 }
 
-inline uint32_t nextPowerOfTwo(uint32_t value)
+constexpr uint32_t nextPowerOfTwo(uint32_t value)
 {
   if (value <= 1)
   {
@@ -75,7 +75,7 @@ inline uint32_t nextPowerOfTwo(uint32_t value)
   return value + 1;
 }
 
-inline uint64_t nextPowerOfTwo(uint64_t value)
+constexpr uint64_t nextPowerOfTwo(uint64_t value)
 {
   if (value <= 1)
   {
