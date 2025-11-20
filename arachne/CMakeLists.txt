@@ -7,10 +7,14 @@ target_sources(arachne
     Finally.hpp
     Resumption.hpp
     Scheduler.hpp
+    SharedQueue.hpp
+    ThreadPool.hpp
   PRIVATE
     Fibre.cpp
     FibreQueue.cpp
     Scheduler.cpp
+    SharedQueue.cpp
+    ThreadPool.cpp
 )
 
 target_compile_features(arachne

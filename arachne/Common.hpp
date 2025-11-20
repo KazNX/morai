@@ -21,6 +21,18 @@ inline bool operator==(const Id &lhs, const Id &rhs) noexcept
   return lhs.id == rhs.id;
 }
 
+struct Time
+{
+  double epoch_time_s = 0.0;
+  double dt = 0.0;
+};
+
+struct SchedulerParams
+{
+  uint32_t initial_queue_size = 1024u;
+  std::vector<int32_t> priority_levels{};
+};
+
 inline uint8_t nextPowerOfTwo(uint8_t value)
 {
   if (value <= 1)

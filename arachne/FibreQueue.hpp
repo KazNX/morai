@@ -11,7 +11,7 @@ namespace arachne
 class FibreQueue
 {
 public:
-  explicit FibreQueue(int32_t priority, uint64_t capacity = 1024u);
+  explicit FibreQueue(int32_t priority, uint32_t capacity = 1024u);
   ~FibreQueue();
 
   FibreQueue(FibreQueue &&other) noexcept;
@@ -22,7 +22,7 @@ public:
 
   [[nodiscard]] int32_t priority() const noexcept { return _priority; }
 
-  [[nodiscard]] size_t size() const
+  [[nodiscard]] std::size_t size() const
   {
     if (_head >= _tail)
     {
@@ -47,20 +47,20 @@ public:
 private:
   [[nodiscard]] bool full() const { return nextIndex(_head) == _tail; }
 
-  [[nodiscard]] uint64_t nextIndex(const uint64_t index) const
+  [[nodiscard]] uint32_t nextIndex(const uint32_t index) const
   {
     return (index + 1) & (_buffer.size() - 1);
   }
 
-  [[nodiscard]] uint64_t priorIndex(const uint64_t index) const
+  [[nodiscard]] uint32_t priorIndex(const uint32_t index) const
   {
     return (index - 1) & (_buffer.size() - 1);
   }
 
   void grow();
 
-  uint64_t _head = 0;
-  uint64_t _tail = 0;
+  uint32_t _head = 0;
+  uint32_t _tail = 0;
   std::vector<Fibre> _buffer{};
   int32_t _priority = 0;
 };

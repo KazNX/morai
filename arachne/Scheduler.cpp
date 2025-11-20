@@ -1,7 +1,5 @@
 #include "Scheduler.hpp"
 #include <exception>
-#include "arachne/Fibre.hpp"
-#include "arachne/FibreQueue.hpp"
 
 #include <algorithm>
 
@@ -39,7 +37,7 @@ bool Scheduler::isRunning(const Id fibre_id) const noexcept
 Id Scheduler::start(Fibre &&fibre, int32_t priority, std::string_view name)
 {
   // Fibre creation assigned the ID. We need to store it before moving the fibre.
-  const Id fibre_id = fibre.id();
+  Id fibre_id = fibre.id();
   fibre.setName(name);
   fibre.__setPriority(priority);
   FibreQueue &fibres = selectQueue(priority);

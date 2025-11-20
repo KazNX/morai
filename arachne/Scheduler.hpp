@@ -1,28 +1,13 @@
 #pragma once
 
 #include "Common.hpp"
-#include "Fibre.hpp"
 #include "FibreQueue.hpp"
-#include "arachne/Fibre.hpp"
 
-#include <array>
 #include <span>
 #include <string_view>
 
 namespace arachne
 {
-struct Time
-{
-  double epoch_time_s = 0.0;
-  double dt = 0.0;
-};
-
-struct SchedulerParams
-{
-  uint64_t initial_queue_size = 1024u;
-  std::vector<int32_t> priority_levels{};
-};
-
 /// Implements a single threaded fibre scheduler.
 ///
 /// The fibre @c Scheduler implements cooperative multitasking in a single thread. Fibres are
@@ -168,8 +153,6 @@ private:
   void updateQueue(double epoch_time_s, FibreQueue &queue);
 
   std::vector<FibreQueue> _fibre_queues;
-  /// Fibres added during an update. Migrated at the end of the update.
-  IdValueType _next_id = 0u;
   Time _time{};
 };
 }  // namespace arachne

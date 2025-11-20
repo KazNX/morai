@@ -1,5 +1,4 @@
 #include <setjmp.h>
-#include <arachne/Fibre.hpp>
 #include <arachne/Scheduler.hpp>
 
 #include <memory>

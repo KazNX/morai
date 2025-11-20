@@ -6,10 +6,10 @@
 
 namespace arachne
 {
-FibreQueue::FibreQueue(int32_t priority, uint64_t capacity)
+FibreQueue::FibreQueue(int32_t priority, uint32_t capacity)
   : _priority(priority)
 {
-  capacity = std::max<uint64_t>(capacity, 16u);
+  capacity = std::max<uint32_t>(capacity, 16u);
   capacity = nextPowerOfTwo(capacity);
   _buffer.resize(capacity);
 }
@@ -29,7 +29,7 @@ bool FibreQueue::contains(const Id &id) const
     return false;
   }
 
-  for (uint64_t i = _tail; i != _head; i = nextIndex(i))
+  for (uint32_t i = _tail; i != _head; i = nextIndex(i))
   {
     if (_buffer.at(i).id() == id)
     {
@@ -48,7 +48,7 @@ void FibreQueue::push(Fibre &&fibre, PriorityPosition position)
 
   if (position == PriorityPosition::Back)
   {
-    const uint64_t insert_index = nextIndex(_head);
+    const uint32_t insert_index = nextIndex(_head);
 
     _buffer.at(_head) = std::move(fibre);
     _head = insert_index;
@@ -56,7 +56,7 @@ void FibreQueue::push(Fibre &&fibre, PriorityPosition position)
   }
 
   // Tail/front insertion.
-  uint64_t insert_index = priorIndex(_tail);
+  uint32_t insert_index = priorIndex(_tail);
   _buffer.at(insert_index) = std::move(fibre);
   _tail = insert_index;
 }
@@ -76,7 +76,7 @@ Fibre FibreQueue::pop()
 void FibreQueue::grow()
 {
   std::vector<Fibre> new_buffer(_buffer.size() * 2);
-  uint64_t new_head = 0u;
+  uint32_t new_head = 0u;
   while (!empty())
   {
     new_buffer.at(new_head++) = pop();
