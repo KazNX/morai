@@ -30,6 +30,11 @@ void setHook(std::function<void(Level, std::string_view)> new_hook)
   hook = new_hook;
 }
 
+void clearHook()
+{
+  hook = &default_hook;
+}
+
 void log(const Level level, std::string_view msg)
 {
   hook(level, std::string{ msg });

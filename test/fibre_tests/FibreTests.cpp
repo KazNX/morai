@@ -1,4 +1,5 @@
 #include <arachne/Finally.hpp>
+#include <arachne/Log.hpp>
 #include <arachne/Scheduler.hpp>
 
 #include <gtest/gtest.h>
@@ -258,6 +259,19 @@ TEST(Fibre, exceptionPropagation)
 void priorityTest(std::span<const std::pair<int32_t, int32_t>> id_priority_pairs,
                   bool const log = false, const uint32_t queue_size = 1024u)
 {
+  // Track log errors to look for priority mismatches.
+  uint32_t log_failures = 0;
+  const auto log_hook = [&log_failures](log::Level level, std::string_view msg) {
+    if (level == log::Level::Error)
+    {
+      ++log_failures;
+    }
+    std::cout << msg << '\n';
+  };
+
+  log::setHook(log_hook);
+  const auto clear_hook = finally([]() { log::clearHook(); });
+
   SchedulerParams params;
   params.initial_queue_size = queue_size;
   for (const auto &pair : id_priority_pairs)
@@ -307,6 +321,7 @@ void priorityTest(std::span<const std::pair<int32_t, int32_t>> id_priority_pairs
   scheduler.update(1);
 
   EXPECT_EQ(execution_order, expected_order);
+  EXPECT_EQ(0, log_failures);
 }
 
 TEST(Fibre, priority)
@@ -367,5 +382,30 @@ TEST(Fibre, queueResize)
   EXPECT_EQ(state.completed, 0u);
   scheduler.update(elapsed += dt);
   EXPECT_EQ(state.completed, fibre_count);
+}
+
+TEST(Fibre, incorrectPriority)
+{
+  // Track log errors to look for priority mismatches.
+  uint32_t log_failures = 0;
+  const auto log_hook = [&log_failures](log::Level level, std::string_view msg) {
+    if (level == log::Level::Error)
+    {
+      ++log_failures;
+    }
+    std::cout << msg << '\n';
+  };
+
+  log::setHook(log_hook);
+  const auto clear_hook = finally([]() { log::clearHook(); });
+
+  Scheduler scheduler{ { .priority_levels = { -1, 1, 2 } } };
+
+  scheduler.start(ticker(), 0);   // Mismatch.
+  scheduler.start(ticker(), -2);  // Mismatch.
+  scheduler.start(ticker(), 5);   // Mismatch.
+  scheduler.start(ticker(), 1);   // ok.
+
+  EXPECT_EQ(log_failures, 3);
 }
 }  // namespace arachne

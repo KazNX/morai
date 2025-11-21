@@ -19,6 +19,7 @@ enum class Level
 using LogHook = std::function<void(Level, std::string_view)>;
 
 void setHook(std::function<void(Level, std::string_view)> hook);
+void clearHook();
 
 void log(Level level, std::string_view msg);
 
