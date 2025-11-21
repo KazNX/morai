@@ -1,5 +1,6 @@
 add_executable(fibre_tests
   FibreTests.cpp
+  MoveTests.cpp
   ThreadPoolTests.cpp
 )
 

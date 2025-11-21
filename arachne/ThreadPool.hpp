@@ -44,6 +44,11 @@ public:
   ThreadPool(ThreadPoolParams params = {});
   ~ThreadPool();
 
+  ThreadPool(const ThreadPool &) = delete;
+  ThreadPool(ThreadPool &&) = delete;
+  ThreadPool &operator=(const ThreadPool &) = delete;
+  ThreadPool &operator=(ThreadPool &&) = delete;
+
   /// Returns true if there are no running fibres.
   [[nodiscard]] bool empty() const noexcept;
 
@@ -102,6 +107,9 @@ public:
   /// @param timeout The maximum time to wait, or indefinite wait on @c std::nullopt.
   /// @return True of the queues are empty (unreliable).
   bool wait(std::optional<std::chrono::milliseconds> timeout = std::nullopt);
+
+  /// Move a fibre into this scheduler (threadsafe).
+  void move(Fibre &&fibre);
 
 private:
   SharedQueue &selectQueue(int32_t priority);

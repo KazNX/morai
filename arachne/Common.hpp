@@ -1,13 +1,22 @@
 #pragma once
 
 #include <functional>
+#include <type_traits>
 
 namespace arachne
 {
 struct SchedulerParams
 {
   uint32_t initial_queue_size = 1024u;
+  uint32_t move_queue_size = 1024u;
   std::vector<int32_t> priority_levels{};
+};
+
+class Fibre;
+
+template <typename Scheduler>
+concept SchedulerType = requires(Scheduler &schduler, Fibre &&fibre) {
+  { schduler.move(std::move(fibre)) } -> std::same_as<void>;
 };
 
 struct Time

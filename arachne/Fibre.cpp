@@ -4,12 +4,12 @@ namespace arachne
 {
 void Fibre::Awaitable::await_suspend(std::coroutine_handle<promise_type> handle) noexcept
 {
-  handle.promise().resumption = resumption;
+  handle.promise().frame.resumption = resumption;
 }
 
 void Fibre::FibreIdAwaitable::await_suspend(std::coroutine_handle<promise_type> handle) noexcept
 {
-  handle.promise().resumption = wait([id = id]() {
+  handle.promise().frame.resumption = wait([id = id]() {
     //
     return !id.isRunning();
   });
@@ -17,7 +17,7 @@ void Fibre::FibreIdAwaitable::await_suspend(std::coroutine_handle<promise_type> 
 
 void Fibre::RescheduleAwaitable::await_suspend(std::coroutine_handle<promise_type> handle) noexcept
 {
-  handle.promise().reschedule = value;
+  handle.promise().frame.reschedule = value;
 }
 
 std::atomic<IdValueType> Fibre::_next_id{ 0 };
@@ -34,7 +34,7 @@ Fibre::~Fibre()
 [[nodiscard]] Resume Fibre::resume(const double epoch_time_s) noexcept
 {
   auto &promise = _handle.promise();
-  const Resumption &resumption = promise.resumption;
+  const Resumption &resumption = promise.frame.resumption;
   if (done())
   {
     flagNotRunning();
@@ -54,9 +54,9 @@ Fibre::~Fibre()
   }
 
   // Resume will set promise.value again so long as we haven't expired.
-  promise.resumption = {};
+  promise.frame.resumption = {};
   _handle.resume();
-  if (_handle.promise().exception)
+  if (_handle.promise().frame.exception)
   {
     flagNotRunning();
     return { .mode = ResumeMode::Exception };
@@ -69,11 +69,11 @@ Fibre::~Fibre()
   }
 
   // Add the epoch time to the resumption value to set the correct resume time.
-  if (promise.resumption.time_s > 0)
+  if (promise.frame.resumption.time_s > 0)
   {
-    promise.resumption.time_s += epoch_time_s;
+    promise.frame.resumption.time_s += epoch_time_s;
   }
   return { .mode = ResumeMode::Continue,
-           .reschedule = std::exchange(promise.reschedule, std::nullopt) };
+           .reschedule = std::exchange(promise.frame.reschedule, std::nullopt) };
 }
 }  // namespace arachne

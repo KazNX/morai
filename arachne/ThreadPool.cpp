@@ -103,6 +103,13 @@ bool ThreadPool::wait(std::optional<std::chrono::milliseconds> timeout)
   return empty();
 }
 
+void ThreadPool::move(Fibre &&fibre)
+{
+  // Unlike scheduler, we can directly insert into the target queue as they are all threadsafe.
+  SharedQueue &queue = selectQueue(fibre.priority());
+  queue.push(std::move(fibre));
+}
+
 SharedQueue &ThreadPool::selectQueue(int32_t priority)
 {
   SharedQueue *best = nullptr;

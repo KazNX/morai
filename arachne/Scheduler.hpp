@@ -2,6 +2,7 @@
 
 #include "Common.hpp"
 #include "FibreQueue.hpp"
+#include "SharedQueue.hpp"
 
 #include <span>
 #include <string_view>
@@ -81,6 +82,11 @@ public:
   Scheduler(SchedulerParams params = {});
   ~Scheduler();
 
+  Scheduler(const Scheduler &) = delete;
+  Scheduler(Scheduler &&) = delete;
+  Scheduler &operator=(const Scheduler &) = delete;
+  Scheduler &operator=(Scheduler &&) = delete;
+
   /// Returns true if there are no running fibres.
   [[nodiscard]] bool empty() const noexcept { return runningCount() == 0; }
   /// Returns the number of running fibres regardless of suspended state.
@@ -137,11 +143,19 @@ public:
   /// reasonable default.
   void update(double epoch_time_s);
 
+  /// Move a fibre into this scheduler (threadsafe).
+  void move(Fibre &&fibre);
+
 private:
+  Id enqueue(Fibre &&fibre);
+
   FibreQueue &selectQueue(int32_t priority);
   void updateQueue(double epoch_time_s, FibreQueue &queue);
 
+  void pumpMoveQueue();
+
   std::vector<FibreQueue> _fibre_queues;
+  SharedQueue _move_queue;
   Time _time{};
 };
 }  // namespace arachne

@@ -12,6 +12,22 @@
 
 namespace arachne
 {
+namespace detail
+{
+struct Frame
+{
+  /// Indicates when next to resume the fibre - see @c Resumption. Note the time value is
+  /// initially given as a relative time, but stored as an epoch time.
+  Resumption resumption{};
+  std::optional<Priority> reschedule{};
+  std::exception_ptr exception{};  ///< Exception storage.
+  Id id{};
+  int32_t priority = 0;
+  std::string name;
+  bool cancel = true;
+};
+}  // namespace detail
+
 /// The @c Fibre implements a coroutine interface for the fibre system. It tracks the current fibre
 /// state and supports resuming.
 ///
@@ -64,19 +80,26 @@ public:
     void await_resume() noexcept {}
   };
 
+  template <typename Scheduler>
+    requires SchedulerType<Scheduler>
+  struct MoveAwaitable
+  {
+    Scheduler *target = nullptr;
+    bool await_ready() const noexcept { return target == nullptr; }
+    void await_suspend(std::coroutine_handle<Fibre::promise_type> handle) noexcept;
+    void await_resume() noexcept {}
+  };
+
   /// Fibre @c promise_type implementation.
   struct promise_type
   {
-    /// Indicates when next to resume the fibre - see @c Resumption. Note the time value is
-    /// initially given as a relative time, but stored as an epoch time.
-    Resumption resumption{};
-    std::optional<Priority> reschedule{};
-    std::exception_ptr exception{};  ///< Exception storage.
+    detail::Frame frame{};
 
     /// Convert to the owning @c Fibre object.
     Fibre get_return_object() noexcept
     {
-      return Fibre{ std::coroutine_handle<promise_type>::from_promise(*this) };
+      return Fibre{ std::coroutine_handle<promise_type>::from_promise(*this),
+                    Id{ Fibre::nextId() } };
     }
 
     /// Initial suspension - always.
@@ -84,7 +107,7 @@ public:
     /// Final suspension - always.
     std::suspend_always final_suspend() noexcept { return {}; }
     /// Exception handling - store to be rethrown on @c Fibre::resume().
-    void unhandled_exception() noexcept { exception = std::current_exception(); }
+    void unhandled_exception() noexcept { frame.exception = std::current_exception(); }
 
     /// Return type definition - void.
     void return_void() noexcept {}
@@ -93,7 +116,7 @@ public:
     /// @param value Immediately stored into the @c resumption member (time still relative).
     std::suspend_always yield_value(Resumption &&value) noexcept
     {
-      resumption = std::move(value);
+      frame.resumption = std::move(value);
       return {};
     }
 
@@ -140,20 +163,30 @@ public:
     {
       return { .value = std::move(reschedule) };
     }
+
+    template <typename Scheduler>
+      requires SchedulerType<Scheduler>
+    MoveAwaitable<Scheduler> await_transform(Scheduler *move_to)
+    {
+      return { .target = move_to };
+    }
   };
 
   Fibre() = default;
+  Fibre(std::coroutine_handle<promise_type> handle, Id id)
+    : _handle{ handle }
+  {
+    auto &promise = _handle.promise();
+    id.setRunning(true);
+    promise.frame.id = std::move(id);
+    promise.frame.cancel = false;
+  }
   Fibre(std::coroutine_handle<promise_type> handle)
     : _handle{ handle }
-    , _id{ nextId(), true }
-    , _cancel{ false }
   {}
   Fibre(const Fibre &) = delete;
   Fibre(Fibre &&other) noexcept
     : _handle{ std::exchange(other._handle, {}) }
-    , _id{ std::exchange(other._id, Id{}) }
-    , _name{ std::exchange(other._name, {}) }
-    , _cancel{ std::exchange(other._cancel, false) }
   {}
   Fibre &operator=(const Fibre &) = delete;
   Fibre &operator=(Fibre &&other) noexcept
@@ -164,23 +197,47 @@ public:
 
   ~Fibre();
 
-  [[nodiscard]] Id id() const { return { _id }; }
+  [[nodiscard]] Id id() const { return { (_handle) ? _handle.promise().frame.id : Id{} }; }
 
-  [[nodiscard]] const std::string &name() const { return _name; }
-  void setName(std::string_view name) { _name = name; }
+  [[nodiscard]] std::string_view name() const
+  {
+    return (_handle) ? _handle.promise().frame.name : std::string_view{};
+  }
+  void setName(std::string_view name) { _handle.promise().frame.name = name; }
 
-  [[nodiscard]] bool cancel() const { return _cancel; }
-  void markForCancellation() { _cancel = true; }
+  [[nodiscard]] bool cancel() const { return (_handle) ? _handle.promise().frame.cancel : true; }
+  void markForCancellation()
+  {
+    if (_handle)
+    {
+      _handle.promise().frame.cancel = true;
+    }
+  }
 
-  [[nodiscard]] int32_t priority() const { return _priority; }
+  [[nodiscard]] int32_t priority() const
+  {
+    return (_handle) ? _handle.promise().frame.priority : 0;
+  }
 
-  void __setPriority(int32_t p) { _priority = p; }
+  void __setPriority(int32_t p)
+  {
+    if (_handle)
+    {
+      _handle.promise().frame.priority = p;
+    }
+  }
 
   /// Checks if this is a valid fibre.
-  [[nodiscard]] bool valid() const noexcept { return _id.valid(); }
+  [[nodiscard]] bool valid() const noexcept
+  {
+    return _handle && _handle.promise().frame.id.valid();
+  }
 
   /// Check if the fibre has completed execution.
-  [[nodiscard]] bool done() const noexcept { return !_handle || _handle.done() || _cancel; }
+  [[nodiscard]] bool done() const noexcept
+  {
+    return !_handle || _handle.done() || _handle.promise().frame.cancel;
+  }
 
   /// Attempt to resume fibre execution.
   ///
@@ -206,19 +263,11 @@ public:
 
   std::exception_ptr exception() const noexcept
   {
-    return _handle ? _handle.promise().exception : nullptr;
+    return _handle ? _handle.promise().frame.exception : nullptr;
   }
 
-  void swap(Fibre &other) noexcept
-  {
-    std::swap(_handle, other._handle);
-    std::swap(_id, other._id);
-    std::swap(_priority, other._priority);
-    std::swap(_name, other._name);
-    std::swap(_cancel, other._cancel);
-  }
+  void swap(Fibre &other) noexcept { std::swap(_handle, other._handle); }
 
-private:
   [[nodiscard]] static IdValueType nextId()
   {
     // We increment by 2 to avoid the running bit.
@@ -231,16 +280,26 @@ private:
     return id;
   }
 
-  void flagNotRunning() noexcept { _id.setRunning(false); }
+private:
+  void flagNotRunning() noexcept { _handle.promise().frame.id.setRunning(false); }
 
   std::coroutine_handle<promise_type> _handle;
-  Id _id{};
-  int32_t _priority = 0;
-  std::string _name;
-  bool _cancel = true;
-
   static std::atomic<IdValueType> _next_id;
 };
+
+
+template <typename Scheduler>
+  requires SchedulerType<Scheduler>
+void Fibre::MoveAwaitable<Scheduler>::await_suspend(
+  std::coroutine_handle<Fibre::promise_type> handle) noexcept
+{
+  if (target)
+  {
+    target->move(Fibre{ std::move(handle) });
+    handle.promise().frame.cancel = true;
+  }
+  target = nullptr;
+}
 }  // namespace arachne
 
 
