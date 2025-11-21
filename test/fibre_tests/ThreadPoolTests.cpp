@@ -90,4 +90,46 @@ TEST(ThreadPool, cancelAll)
   EXPECT_TRUE(pool.wait(std::chrono::milliseconds(100)));
   EXPECT_TRUE(pool.empty());
 }
+
+// FIXME: This test deadlocks as the job queues cannot grow. This is a known limitation.
+TEST(ThreadPool, DISABLED_smallQueue)
+{
+  ThreadPoolParams params{ .worker_count = 2 };
+  params.initial_queue_size = 2;
+  ThreadPool pool{ params };
+
+  std::atomic<int> counter = 0;
+  std::atomic_flag block = ATOMIC_FLAG_INIT;
+  const unsigned task_count = 100;
+
+  block.test_and_set();
+
+  const auto task = [&counter, &block]() -> Fibre {
+    co_yield {};
+    counter.fetch_add(1, std::memory_order_relaxed);
+    while (block.test())
+    {
+      co_yield {};
+    }
+    co_return;
+  };
+
+  // Start a thread to clear the block flag after a delay. The test is working if it completes.
+  std::thread unblocker_thread([&block]() {
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    block.clear();
+  });
+
+  // Try start all fibres.
+  for (unsigned i = 0; i < task_count; ++i)
+  {
+    pool.start(task(), std::format("task{}", i));
+  }
+
+  block.clear();
+
+  EXPECT_TRUE(pool.wait(std::chrono::seconds(5)));
+  EXPECT_EQ(counter.load(std::memory_order_relaxed), task_count);
+  EXPECT_TRUE(pool.empty());
+}
 }  // namespace arachne

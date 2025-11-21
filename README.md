@@ -73,7 +73,7 @@ cmake --build build --config Release -j
     - [x] Priority queues, task based scheduler
       - Each thread picks up a fibre, runs one update cycle, back to job pool
       - Likely no head insertion
-    - [ ] Unit tests
+    - [x] Unit tests
   - [ ] Cross thread scheduling
     - Multiple schedulers, (e.g., one per thread)
     - Fibre can elect to move between threads via `co_await move_to_scheduler(...);`

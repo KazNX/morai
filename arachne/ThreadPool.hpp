@@ -33,6 +33,11 @@ struct ThreadPoolParams : public SchedulerParams
 ///
 /// @c ThreadPool::worker_count may be zero in which case the user must call @c update() must be
 /// called to process tasks. This can be used to control the thread pool manually.
+///
+/// Unlike the @c Scheduler, the @c ThreadPool has fixed size queues. Calling @c start() blocks
+/// until there is space in the queue to add the new fibre to the target priority queue. As such
+/// it is possible to deadlock the thread pool as all workers try to push back their fibre to a full
+/// queue. There is current no solution to this issue.
 class ThreadPool
 {
 public:
