@@ -68,6 +68,14 @@ Fibre::~Fibre()
     return { .mode = ResumeMode::Expire };
   }
 
+  // Check for move
+  if (_handle.promise().frame.move_operation)
+  {
+    auto move_op = std::exchange(_handle.promise().frame.move_operation, {});
+    move_op(std::move(*this));
+    return { ResumeMode::Moved };
+  }
+
   // Add the epoch time to the resumption value to set the correct resume time.
   if (promise.frame.resumption.time_s > 0)
   {

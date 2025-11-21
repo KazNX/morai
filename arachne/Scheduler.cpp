@@ -114,6 +114,9 @@ FibreQueue &Scheduler::selectQueue(int32_t priority)
 
 void Scheduler::updateQueue(const double epoch_time_s, FibreQueue &queue)
 {
+  // Move a pending item from the move queue.
+  pumpMoveQueue();
+
   // Update N times where N is the size. Note the size may change during iteration as new fibres
   // are added, or fibres removed. Expired fibres are not reinserted, so the size would shrink. We
   // account for this by tracking expired_count. New fibres may cause unbounded growth.
@@ -134,7 +137,7 @@ void Scheduler::updateQueue(const double epoch_time_s, FibreQueue &queue)
     }
 
     const Resume resume = fibre.resume(epoch_time_s);
-    if (resume.mode == ResumeMode::Expire) [[unlikely]]
+    if (resume.mode == ResumeMode::Expire || resume.mode == ResumeMode::Moved) [[unlikely]]
     {
       // Expired. All done.
       ++expired_count;

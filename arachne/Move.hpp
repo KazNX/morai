@@ -8,7 +8,7 @@ class Fibre;
 
 template <typename Scheduler>
   requires SchedulerType<Scheduler>
-Scheduler &moveTo(Scheduler &scheduler)
+Scheduler *moveTo(Scheduler &scheduler)
 {
   return &scheduler;
 }

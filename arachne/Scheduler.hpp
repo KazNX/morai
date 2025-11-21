@@ -97,7 +97,7 @@ public:
     {
       count += queue.size();
     }
-    return count;
+    return count + _move_queue.size();
   }
 
   [[nodiscard]] const Time &time() const noexcept { return _time; }

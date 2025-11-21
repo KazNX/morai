@@ -22,10 +22,11 @@ struct Priority
 /// Return values for @c Fibre::resume(), indicating the new state of the fibre.
 enum class ResumeMode : std::int8_t
 {
-  Continue,  ///< Fibre continued running come code.
-  Sleep,     ///< Fibre is sleeping or waiting.
-  Expire,    ///< Fibre has expired and requires cleanup.
-  Exception  ///< An exception was raised. Expire the fibre after propagating.
+  Continue,   ///< Fibre continued running come code.
+  Sleep,      ///< Fibre is sleeping or waiting.
+  Moved,      ///< Moved to another scheduler.
+  Expire,     ///< Fibre has expired and requires cleanup.
+  Exception,  ///< An exception was raised. Expire the fibre after propagating.
 };
 
 struct Resume

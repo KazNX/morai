@@ -12,6 +12,8 @@
 
 namespace arachne
 {
+class Fibre;
+
 namespace detail
 {
 struct Frame
@@ -24,6 +26,7 @@ struct Frame
   Id id{};
   int32_t priority = 0;
   std::string name;
+  std::function<void(Fibre &&)> move_operation{};
   bool cancel = true;
 };
 }  // namespace detail
@@ -295,10 +298,11 @@ void Fibre::MoveAwaitable<Scheduler>::await_suspend(
 {
   if (target)
   {
-    target->move(Fibre{ std::move(handle) });
-    handle.promise().frame.cancel = true;
+    handle.promise().frame.move_operation = [target = this->target](Fibre &&fibre) {
+      target->move(std::move(fibre));
+    };
+    target = nullptr;
   }
-  target = nullptr;
 }
 }  // namespace arachne
 

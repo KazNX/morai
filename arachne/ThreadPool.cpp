@@ -211,7 +211,7 @@ bool ThreadPool::updateNextFibre()
 
   const double epoch_time_s = std::chrono::system_clock::now().time_since_epoch().count();
   const Resume resume = fibre.resume(epoch_time_s);
-  if (resume.mode == ResumeMode::Expire) [[unlikely]]
+  if (resume.mode == ResumeMode::Expire || resume.mode == ResumeMode::Moved) [[unlikely]]
   {
     // Expire the fibre.
     return true;
