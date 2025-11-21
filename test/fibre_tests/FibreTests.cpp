@@ -256,8 +256,8 @@ TEST(Fibre, exceptionPropagation)
   EXPECT_TRUE(exception_caught);
 }
 
-void priorityTest(std::span<const std::pair<int32_t, int32_t>> id_priority_pairs,
-                  bool const log = false, const uint32_t queue_size = 1024u)
+void priorityTest(std::span<std::pair<int32_t, int32_t>> id_priority_pairs, bool const log = false,
+                  const uint32_t queue_size = 1024u)
 {
   // Track log errors to look for priority mismatches.
   uint32_t log_failures = 0;
@@ -282,15 +282,6 @@ void priorityTest(std::span<const std::pair<int32_t, int32_t>> id_priority_pairs
     }
   }
 
-  // Resolve the expected order.
-  std::vector<int32_t> expected_order;
-  for (const auto idx :
-       id_priority_pairs | std::views::transform([](const auto &pair) { return pair.first; }))
-  {
-    expected_order.emplace_back(idx);
-  }
-  std::ranges::sort(expected_order);
-
   Scheduler scheduler{ std::move(params) };
   std::vector<int32_t> execution_order;
   std::vector<int32_t> shutdown_order;
@@ -309,8 +300,6 @@ void priorityTest(std::span<const std::pair<int32_t, int32_t>> id_priority_pairs
     shutdown_order.emplace_back(id);
   };
 
-  auto insert_validation = [&expected_order, &scheduler]() { return !expected_order.empty(); };
-
   for (const auto &id_priority_pair : id_priority_pairs)
   {
     scheduler.start(fibre_entry(id_priority_pair.first), id_priority_pair.second,
@@ -319,6 +308,19 @@ void priorityTest(std::span<const std::pair<int32_t, int32_t>> id_priority_pairs
 
   scheduler.update(0);
   scheduler.update(1);
+
+  std::ranges::sort(id_priority_pairs,
+                    [](const std::pair<int32_t, int32_t> &a, const std::pair<int32_t, int32_t> &b) {
+                      return a.second < b.second || a.second == b.second && a.first < b.first;
+                    });
+
+  // Resolve the expected order.
+  std::vector<int32_t> expected_order;
+  for (const auto idx :
+       id_priority_pairs | std::views::transform([](const auto &pair) { return pair.first; }))
+  {
+    expected_order.emplace_back(idx);
+  }
 
   EXPECT_EQ(execution_order, expected_order);
   EXPECT_EQ(0, log_failures);
