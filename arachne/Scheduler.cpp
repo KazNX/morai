@@ -1,5 +1,6 @@
 #include "Scheduler.hpp"
-#include <exception>
+
+#include "Log.hpp"
 
 #include <algorithm>
 
@@ -27,6 +28,7 @@ Id Scheduler::start(Fibre &&fibre, int32_t priority, std::string_view name)
 {
   // Fibre creation assigned the ID. We need to store it before moving the fibre.
   Id fibre_id = fibre.id();
+  fibre.__setPriority(priority);
   fibre.setName(name);
   return enqueue(std::move(fibre));
 }
@@ -85,31 +87,38 @@ void Scheduler::move(Fibre &&fibre)
 
 Id Scheduler::enqueue(Fibre &&fibre)
 {
-  FibreQueue &fibres = selectQueue(fibre.priority());
+  FibreQueue &fibres = selectQueue(fibre.priority(), false);
   Id id = fibre.id();  // Cache Id before move.
   fibres.push(std::move(fibre));
   return id;
 }
 
-FibreQueue &Scheduler::selectQueue(int32_t priority)
+FibreQueue &Scheduler::selectQueue(int32_t priority, bool quiet)
 {
-  FibreQueue *best = nullptr;
+  size_t best_idx = 0;
 
-  for (auto &queue : _fibre_queues)
+  for (size_t i = 0; i < _fibre_queues.size(); ++i)
   {
+    FibreQueue &queue = _fibre_queues.at(i);
     if (priority == queue.priority())
     {
       return queue;
     }
     else if (priority > queue.priority())
     {
-      // TODO: Log error that no exact priority match was made.
-      return queue;
+      best_idx = i;
+    }
+    else if (priority < queue.priority())
+    {
+      break;
     }
   }
 
-  // Fallback to the lowest priority queue
-  return _fibre_queues.back();
+  FibreQueue &queue = _fibre_queues.at(best_idx);
+  log::error(
+    std::format("Scheduler: Fibre priority mismatch: {} moved to {}", priority, queue.priority()));
+
+  return queue;
 }
 
 void Scheduler::updateQueue(const double epoch_time_s, FibreQueue &queue)
@@ -160,7 +169,7 @@ void Scheduler::updateQueue(const double epoch_time_s, FibreQueue &queue)
       const int32_t initial_priority = fibre.priority();
       if (initial_priority != reschedule.priority)
       {
-        FibreQueue &new_queue = selectQueue(reschedule.priority);
+        FibreQueue &new_queue = selectQueue(reschedule.priority, true);
         if (&new_queue != &queue)
         {
           // Update fibre priority and reschedule.

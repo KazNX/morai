@@ -61,7 +61,7 @@ cmake --build build --config Release -j
 ## TODO
 
 - [ ] Usage examples
-- [ ] Features to consider
+- [x] Features to consider
   - [x] Scheduling priority
     - [x] Set on create
     - [x] Allocated fixed priority queues in the scheduler
@@ -74,7 +74,7 @@ cmake --build build --config Release -j
       - Each thread picks up a fibre, runs one update cycle, back to job pool
       - Likely no head insertion
     - [x] Unit tests
-  - [ ] Cross thread scheduling
+  - [x] Cross thread scheduling
     - Multiple schedulers, (e.g., one per thread)
     - Fibre can elect to move between threads via `co_await move_to_scheduler(...);`
       - Could be on same thread, but works across threads
@@ -84,4 +84,4 @@ cmake --build build --config Release -j
     - [x] Use 1 bit to flag completion
     - [x] Change await statement to await the `Id` object.
     - [x] ~~Support awaiting multiple fibres~~
-  - [ ] Logging interface
+  - [x] Logging interface

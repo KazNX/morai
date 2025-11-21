@@ -5,6 +5,10 @@ target_sources(arachne
     Fibre.hpp
     FibreQueue.hpp
     Finally.hpp
+    Id.hpp
+    Log.hpp
+    Move.hpp
+    MPMCQueue.hpp
     Resumption.hpp
     Scheduler.hpp
     SharedQueue.hpp
@@ -12,6 +16,7 @@ target_sources(arachne
   PRIVATE
     Fibre.cpp
     FibreQueue.cpp
+    Log.cpp
     Scheduler.cpp
     SharedQueue.cpp
     ThreadPool.cpp

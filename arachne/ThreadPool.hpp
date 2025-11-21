@@ -112,7 +112,7 @@ public:
   void move(Fibre &&fibre);
 
 private:
-  SharedQueue &selectQueue(int32_t priority);
+  SharedQueue &selectQueue(int32_t priority, bool quiet);
   void pushFibre(Fibre &&fibre);
   [[nodiscard]] Fibre nextPriorityFibre();
   [[nodiscard]] Fibre nextFibre();

@@ -1,6 +1,7 @@
 #include "ThreadPool.hpp"
 
 #include "Finally.hpp"
+#include "Log.hpp"
 #include "Resumption.hpp"
 #include "SharedQueue.hpp"
 
@@ -57,7 +58,7 @@ Id ThreadPool::start(Fibre &&fibre, int32_t priority, std::string_view name)
   Id fibre_id = fibre.id();
   fibre.__setPriority(priority);
   fibre.setName(name);
-  SharedQueue &fibres = selectQueue(priority);
+  SharedQueue &fibres = selectQueue(priority, false);
   fibres.push(std::move(fibre));
   return fibre_id;
 }
@@ -106,34 +107,41 @@ bool ThreadPool::wait(std::optional<std::chrono::milliseconds> timeout)
 void ThreadPool::move(Fibre &&fibre)
 {
   // Unlike scheduler, we can directly insert into the target queue as they are all threadsafe.
-  SharedQueue &queue = selectQueue(fibre.priority());
+  SharedQueue &queue = selectQueue(fibre.priority(), false);
   queue.push(std::move(fibre));
 }
 
-SharedQueue &ThreadPool::selectQueue(int32_t priority)
+SharedQueue &ThreadPool::selectQueue(int32_t priority, bool quiet)
 {
-  SharedQueue *best = nullptr;
+  size_t best_idx = 0;
 
-  for (auto &queue : _fibre_queues)
+  for (size_t i = 0; i < _fibre_queues.size(); ++i)
   {
-    if (priority == queue->priority())
+    SharedQueue &queue = *_fibre_queues.at(i);
+    if (priority == queue.priority())
     {
-      return *queue;
+      return queue;
     }
-    else if (priority > queue->priority())
+    else if (priority > queue.priority())
     {
-      // TODO: Log error that no exact priority match was made.
-      return *queue;
+      best_idx = i;
+    }
+    else if (priority < queue.priority())
+    {
+      break;
     }
   }
 
-  // Fallback to the lowest priority queue
-  return *_fibre_queues.back();
+  SharedQueue &queue = *_fibre_queues.at(best_idx);
+  log::error(
+    std::format("Scheduler: Fibre priority mismatch: {} moved to {}", priority, queue.priority()));
+
+  return queue;
 }
 
 void ThreadPool::pushFibre(Fibre &&fibre)
 {
-  SharedQueue &queue = selectQueue(fibre.priority());
+  SharedQueue &queue = selectQueue(fibre.priority(), true);
   queue.push(std::move(fibre));
 }
 
@@ -231,7 +239,7 @@ bool ThreadPool::updateNextFibre()
     const int32_t initial_priority = fibre.priority();
     if (initial_priority != reschedule.priority)
     {
-      SharedQueue &new_queue = selectQueue(reschedule.priority);
+      SharedQueue &new_queue = selectQueue(reschedule.priority, true);
       // Update fibre priority and reschedule.
       fibre.__setPriority(reschedule.priority);
     }

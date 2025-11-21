@@ -149,7 +149,7 @@ public:
 private:
   Id enqueue(Fibre &&fibre);
 
-  FibreQueue &selectQueue(int32_t priority);
+  FibreQueue &selectQueue(int32_t priority, bool quiet);
   void updateQueue(double epoch_time_s, FibreQueue &queue);
 
   void pumpMoveQueue();

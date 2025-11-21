@@ -7,6 +7,7 @@
 #include <array>
 #include <ranges>
 #include <random>
+#include "arachne/Common.hpp"
 
 namespace arachne
 {
