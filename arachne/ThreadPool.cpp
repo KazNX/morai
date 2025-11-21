@@ -72,10 +72,9 @@ void ThreadPool::cancelAll()
   }
 }
 
-void ThreadPool::update(std::chrono::milliseconds time_slice)
+void ThreadPool::update(std::function<bool()> continue_condition)
 {
-  const auto target_end_time = std::chrono::steady_clock::now() + time_slice;
-  while (std::chrono::steady_clock::now() < target_end_time)
+  while (continue_condition())
   {
     if (!updateNextFibre())
     {
@@ -84,10 +83,18 @@ void ThreadPool::update(std::chrono::milliseconds time_slice)
   }
 }
 
+void ThreadPool::update(std::chrono::milliseconds time_slice)
+{
+  update([target_end_time = std::chrono::steady_clock::now() + time_slice]() {
+    return std::chrono::steady_clock::now() < target_end_time;
+  });
+}
+
 bool ThreadPool::wait(std::optional<std::chrono::milliseconds> timeout)
 {
   const auto target_end_time = timeout.has_value() ? std::chrono::steady_clock::now() + *timeout :
                                                      std::chrono::steady_clock::time_point::max();
+
   while (!empty() && std::chrono::steady_clock::now() < target_end_time)
   {
     std::this_thread::sleep_for(_idle_sleep_duration);
@@ -155,12 +162,20 @@ void ThreadPool::createQueues(ThreadPoolParams &params)
 
 void ThreadPool::startWorkers(ThreadPoolParams &params)
 {
-  const int32_t thread_count =
-    (params.thread_count > 0) ?
-      params.thread_count :
-      std::max(static_cast<int32_t>(std::thread::hardware_concurrency()) - params.thread_count, 1);
+  int32_t worker_count = std::thread::hardware_concurrency();
 
-  for (int32_t thread_index = 0; thread_index < thread_count; ++thread_index)
+  if (params.worker_count.has_value())
+  {
+    worker_count = *params.worker_count;
+    if (worker_count < 0)
+    {
+      worker_count =
+        std::max(static_cast<int32_t>(std::thread::hardware_concurrency()) + worker_count, 1);
+    }
+  }
+
+  _workers.reserve(worker_count);
+  for (int32_t thread_index = 0; thread_index < worker_count; ++thread_index)
   {
     _workers.emplace_back(&ThreadPool::workerThread, this, thread_index,
                           params.idle_sleep_duration);

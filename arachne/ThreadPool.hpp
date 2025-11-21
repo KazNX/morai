@@ -5,6 +5,7 @@
 #include "SharedQueue.hpp"
 
 #include <chrono>
+#include <optional>
 #include <thread>
 #include <string_view>
 
@@ -13,16 +14,25 @@ namespace arachne
 struct ThreadPoolParams : public SchedulerParams
 {
   /// Number of threads to use in the thread pool. Special semantics are given
-  /// to zero and negative values:
+  /// to the following value ranges:
   ///
-  /// - 0: Use all available threads - @c std::thread::hardware_concurrency()
+  /// - No value - use all available threads: @c std::thread::hardware_concurrency()
+  /// - Positive N: Use N threads, up to @c std::thread::hardware_concurrency()
+  /// - 0: Create zero workers. User must call @c ThreadPool::update().
   /// - -1: Use available threads minus one.
-  /// - -N: Use available threads minus N.
-  int32_t thread_count = 0u;
+  /// - -N: Use available threads minus N (at least 1).
+  std::optional<int32_t> worker_count = 0u;
   std::chrono::milliseconds idle_sleep_duration{ 1 };
 };
 
 /// A multi-threaded task scheduler using fibres (coroutines) as tasks.
+///
+/// The thread pool is created with a number of worker threads - see
+/// @c ThreadPoolParams::worker_count - which continually pop tasks then return them to the worker
+/// queues.
+///
+/// @c ThreadPool::worker_count may be zero in which case the user must call @c update() must be
+/// called to process tasks. This can be used to control the thread pool manually.
 class ThreadPool
 {
 public:
@@ -34,6 +44,10 @@ public:
 
   /// Returns the (approximate) number of running fibres regardless of suspended state.
   [[nodiscard]] std::size_t runningCount() const noexcept;
+
+  /// Return the number of worker threads in this pool. Could be zero in which case @c update() must
+  /// be called manually to process tasks.
+  [[nodiscard]] std::size_t workerCount() const noexcept { return _workers.size(); }
 
   /// Start a fibre.
   ///
@@ -58,21 +72,30 @@ public:
     return start(std::move(fibre), 0, std::move(name));
   }
 
-  // /// Generate a wait condition to wait until the specified fibre is no longer
-  // /// running.
-  // /// @param fibre_id The fibre ID to wait for.
-  // /// @return The wait condition. Can be used with @c co_await in a fibre.
-  // WaitCondition await(const Id fibre_id) const noexcept
-  // {
-  //   return [this, fibre_id]() -> bool { return !isRunning(fibre_id); };
-  // }
-
   /// Cancel all running fibres.
   void cancelAll();
 
-  /// Have this (main) thread join in the scheduling for at least the given time slice.
+  /// Have this thread join in the scheduling consuming tasks until there are none available or
+  /// @c continue_condition returns false.
+  ///
+  /// Threadsafe so long as the @p continue_condition is threadsafe.
+  void update(std::function<bool()> continue_condition);
+
+  /// Overload of @c update() which sets the condition to false once the specified time slice
+  /// has elapsed.
+  ///
+  /// Threadsafe.
   void update(std::chrono::milliseconds time_slice);
 
+  /// Wait for all tasks to complete within the specified timeout.
+  ///
+  /// Note this stops waiting if at any point the queues are empty. However, this can happen because
+  /// all tasks have been moved to worker threads so there's no guarantee that all tasks are
+  /// complete. Additionally, the return value comes after the loop condition is checked, so it's
+  /// also possible to return false before the timeout elapses.
+  ///
+  /// @param timeout The maximum time to wait, or indefinite wait on @c std::nullopt.
+  /// @return True of the queues are empty (unreliable).
   bool wait(std::optional<std::chrono::milliseconds> timeout = std::nullopt);
 
 private:
