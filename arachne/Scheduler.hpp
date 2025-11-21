@@ -93,8 +93,6 @@ public:
     }
     return count;
   }
-  /// Check if there is a fibre running with the given ID.
-  [[nodiscard]] bool isRunning(Id fibre_id) const noexcept;
 
   [[nodiscard]] const Time &time() const noexcept { return _time; }
 
@@ -114,7 +112,7 @@ public:
   /// @endcode
   ///
   /// @param fibre The fibre entry point.
-  /// @return The fibre @c Id. Maybe used for cancellation or @c await().
+  /// @return The fibre @c Id. Maybe used for cancellation or @c co_await.
   Id start(Fibre &&fibre, int32_t priority = 0, std::string_view name = {});
   Id start(Fibre &&fibre, std::string_view name)
   {
@@ -127,15 +125,6 @@ public:
   bool cancel(Id fibre_id);
   /// Cancel multiple running fibres by @c Id.
   std::size_t cancel(std::span<const Id> fibre_ids);
-
-  /// Generate a wait condition to wait until the specified fibre is no longer
-  /// running.
-  /// @param fibre_id The fibre ID to wait for.
-  /// @return The wait condition. Can be used with @c co_await in a fibre.
-  WaitCondition await(const Id fibre_id) const noexcept
-  {
-    return [this, fibre_id]() -> bool { return !isRunning(fibre_id); };
-  }
 
   /// Cancel all running fibres.
   void cancelAll();

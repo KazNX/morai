@@ -68,7 +68,7 @@ cmake --build build --config Release -j
     - [x] Move fibres to nearest, lower bound priority
     - [x] Allow head insertion in fibre queues.
   - [x] Reschedule yield statement - update again on a cycle
-  - [ ] Multi-threaded
+  - [x] Multi-threaded
     - [x] ThreadPool scheduler
     - [x] Priority queues, task based scheduler
       - Each thread picks up a fibre, runs one update cycle, back to job pool
@@ -78,10 +78,10 @@ cmake --build build --config Release -j
     - Multiple schedulers, (e.g., one per thread)
     - Fibre can elect to move between threads via `co_await move_to_scheduler(...);`
       - Could be on same thread, but works across threads
-  - [ ] Improve awaiting fibres
-    - [ ] Change Id to a kind of shared pointer to the Id number
-    - [ ] `isRunning()` check becomes an `Id` operation.
-    - [ ] Use 1 bit to flag completion
-    - [ ] Change await statement to await the `Id` object.
-    - [ ] Support awaiting multiple fibres
+  - [x] Improve awaiting fibres
+    - [x] Change Id to a kind of shared pointer to the Id number
+    - [x] `isRunning()` check becomes an `Id` operation.
+    - [x] Use 1 bit to flag completion
+    - [x] Change await statement to await the `Id` object.
+    - [x] ~~Support awaiting multiple fibres~~
   - [ ] Logging interface

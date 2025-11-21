@@ -22,18 +22,6 @@ Scheduler::Scheduler(SchedulerParams params)
 
 Scheduler::~Scheduler() = default;
 
-bool Scheduler::isRunning(const Id fibre_id) const noexcept
-{
-  for (const auto &queue : _fibre_queues)
-  {
-    if (queue.contains(fibre_id))
-    {
-      return true;
-    }
-  }
-  return false;
-}
-
 Id Scheduler::start(Fibre &&fibre, int32_t priority, std::string_view name)
 {
   // Fibre creation assigned the ID. We need to store it before moving the fibre.
@@ -47,7 +35,7 @@ Id Scheduler::start(Fibre &&fibre, int32_t priority, std::string_view name)
 
 bool Scheduler::cancel(const Id fibre_id)
 {
-  if (fibre_id == InvalidFibre)
+  if (!fibre_id.valid())
   {
     return false;
   }

@@ -1,8 +1,5 @@
-#include <setjmp.h>
 #include <arachne/Scheduler.hpp>
 
-#include <memory>
-#include <random>
 #include <weaver/Input.hpp>
 #include <weaver/Weaver.hpp>
 
@@ -11,6 +8,7 @@
 #include <array>
 #include <chrono>
 #include <iostream>
+#include <memory>
 #include <numbers>
 #include <random>
 #include <thread>
@@ -306,8 +304,8 @@ arachne::Fibre launcher(std::shared_ptr<GlobalState> state, std::shared_ptr<Laun
   {
     // Start with the user mode launcher. If that ends we'll switch to auto mode and we basically
     // toggle between them.
-    co_await state->scheduler.await(state->scheduler.start(launcherUser(state, launcher)));
-    co_await state->scheduler.await(state->scheduler.start(launcherAuto(state, launcher)));
+    co_await state->scheduler.start(launcherUser(state, launcher));
+    co_await state->scheduler.start(launcherAuto(state, launcher));
   }
 }
 

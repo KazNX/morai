@@ -25,7 +25,7 @@ TEST(Fibre, cancelUnknown)
   Scheduler scheduler;
   Id unknown_id{ 9999 };
 
-  EXPECT_FALSE(scheduler.isRunning(unknown_id));
+  EXPECT_FALSE(unknown_id.isRunning());
   EXPECT_FALSE(scheduler.cancel(unknown_id));
 }
 
@@ -36,14 +36,14 @@ TEST(Fibre, ticker)
 
   const double dt = 0.1;
   double simulated_time_s = 0;
-  EXPECT_TRUE(scheduler.isRunning(fibre_id));
-  while (scheduler.isRunning(fibre_id))
+  EXPECT_TRUE(fibre_id.isRunning());
+  while (fibre_id.isRunning())
   {
     scheduler.update(simulated_time_s);
     simulated_time_s += dt;
   }
 
-  EXPECT_FALSE(scheduler.isRunning(fibre_id));
+  EXPECT_FALSE(fibre_id.isRunning());
 }
 
 Fibre cancellation(bool *cleaned_up)
@@ -71,7 +71,7 @@ TEST(Fibre, cancellation)
 
   const double dt = 0.1;
   double simulated_time_s = 0;
-  EXPECT_TRUE(scheduler.isRunning(fibre_id));
+  EXPECT_TRUE(fibre_id.isRunning());
   for (int i = 0; i < 5; ++i)
   {
     scheduler.update(simulated_time_s);
@@ -79,7 +79,7 @@ TEST(Fibre, cancellation)
   }
 
   scheduler.cancel(fibre_id);
-  EXPECT_FALSE(scheduler.isRunning(fibre_id));
+  EXPECT_FALSE(fibre_id.isRunning());
 }
 
 
@@ -142,11 +142,11 @@ TEST(Fibre, spawn)
     Id child1 = scheduler.start(child_fibre(1), "child1");
     Id child2 = scheduler.start(child_fibre(2), "child2");
 
-    co_await scheduler.await(child1);
-    co_await scheduler.await(child2);
+    co_await child1;
+    co_await child2;
 
-    EXPECT_FALSE(scheduler.isRunning(child1));
-    EXPECT_FALSE(scheduler.isRunning(child2));
+    EXPECT_FALSE(child1.isRunning());
+    EXPECT_FALSE(child2.isRunning());
 
     std::cout << "Parent fibre done\n";
   };
@@ -155,14 +155,14 @@ TEST(Fibre, spawn)
 
   const double dt = 0.1;
   double simulated_time_s = 0;
-  EXPECT_TRUE(scheduler.isRunning(parent_id));
-  while (scheduler.isRunning(parent_id))
+  EXPECT_TRUE(parent_id.isRunning());
+  while (parent_id.isRunning())
   {
     scheduler.update(simulated_time_s);
     simulated_time_s += dt;
   }
 
-  EXPECT_FALSE(scheduler.isRunning(parent_id));
+  EXPECT_FALSE(parent_id.isRunning());
   EXPECT_TRUE(scheduler.empty());
 }
 
@@ -192,10 +192,10 @@ TEST(Fibre, spawnAndCancel)
     Id child1 = scheduler.start(child_fibre(1, true), "child1");
     Id child2 = scheduler.start(child_fibre(2, false), "child2");
 
-    co_await scheduler.await(child2);
+    co_await child2;
 
-    EXPECT_TRUE(scheduler.isRunning(child1));
-    EXPECT_FALSE(scheduler.isRunning(child2));
+    EXPECT_TRUE(child1.isRunning());
+    EXPECT_FALSE(child2.isRunning());
     scheduler.cancel(child1);
 
     std::cout << "Parent fibre done\n";
@@ -206,15 +206,15 @@ TEST(Fibre, spawnAndCancel)
 
   const double dt = 0.1;
   double simulated_time_s = 0;
-  EXPECT_TRUE(scheduler.isRunning(parent_id));
-  while (scheduler.isRunning(parent_id))
+  EXPECT_TRUE(parent_id.isRunning());
+  while (parent_id.isRunning())
   {
     scheduler.update(simulated_time_s);
     simulated_time_s += dt;
   }
 
-  EXPECT_FALSE(scheduler.isRunning(parent_id));
-  EXPECT_TRUE(scheduler.isRunning(persistent_id));
+  EXPECT_FALSE(parent_id.isRunning());
+  EXPECT_TRUE(persistent_id.isRunning());
   scheduler.cancelAll();
   EXPECT_TRUE(scheduler.empty());
 }
@@ -234,9 +234,9 @@ TEST(Fibre, exceptionPropagation)
 
   const double dt = 0.1;
   double simulated_time_s = 0;
-  EXPECT_TRUE(scheduler.isRunning(fibre_id));
+  EXPECT_TRUE(fibre_id.isRunning());
   bool exception_caught = false;
-  while (scheduler.isRunning(fibre_id))
+  while (fibre_id.isRunning())
   {
     try
     {
@@ -250,7 +250,7 @@ TEST(Fibre, exceptionPropagation)
     simulated_time_s += dt;
   }
 
-  EXPECT_FALSE(scheduler.isRunning(fibre_id));
+  EXPECT_FALSE(fibre_id.isRunning());
   EXPECT_TRUE(exception_caught);
 }
 

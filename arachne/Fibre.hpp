@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Id.hpp"
 #include "Common.hpp"
 #include "Resumption.hpp"
 
@@ -37,6 +38,18 @@ public:
     Resumption resumption;
     /// Check if the fibre can immediately continue (true) or fibre needs to suspend (false).
     bool await_ready() const { return resumption.condition && resumption.condition(); }
+    /// Suspend the fibre, migrating the @c resumption condition to the promise.
+    void await_suspend(std::coroutine_handle<promise_type> handle) noexcept;
+    /// Resumption handling - no-op.
+    void await_resume() noexcept {}
+  };
+
+  struct FibreIdAwaitable
+  {
+    /// Transient storage for resumption condition. Propagated to the promise on suspension.
+    Id id;
+    /// Check if the fibre can immediately continue (true) or fibre needs to suspend (false).
+    bool await_ready() const { return !id.isRunning(); }
     /// Suspend the fibre, migrating the @c resumption condition to the promise.
     void await_suspend(std::coroutine_handle<promise_type> handle) noexcept;
     /// Resumption handling - no-op.
@@ -84,11 +97,6 @@ public:
       return {};
     }
 
-    RescheduleAwaitable await_transform(Priority &&reschedule) noexcept
-    {
-      return { .value = std::move(reschedule) };
-    }
-
     /// @c co_await handling for @c double sleep durations.
     /// @param duration_s The time to sleep (seconds).
     Awaitable await_transform(const double duration_s) noexcept
@@ -118,24 +126,32 @@ public:
       return { .resumption = wait(condition) };
     }
 
-    /// Prevent accidentally waiting on a fibre ID. The correct expression is
-    ///
-    /// ```
-    /// co_await scheduler.await(fibre_id);
-    /// ```
-    Awaitable await_transform(Id) = delete;
+    /// @c co_await a fibre @c Id. Waits until the @c Id is flagged as not running.
+    FibreIdAwaitable await_transform(const Id &id)
+    {
+      //
+      return { .id = id };
+    }
+
+    /// @c co_await handling for @c Priority rescheduling.
+    /// Waits for the fibre to be assigned a new priority. Essentially this resumes on the next
+    /// update.
+    RescheduleAwaitable await_transform(Priority &&reschedule) noexcept
+    {
+      return { .value = std::move(reschedule) };
+    }
   };
 
   Fibre() = default;
   Fibre(std::coroutine_handle<promise_type> handle)
     : _handle{ handle }
-    , _id{ nextId() }
+    , _id{ nextId(), true }
     , _cancel{ false }
   {}
   Fibre(const Fibre &) = delete;
   Fibre(Fibre &&other) noexcept
     : _handle{ std::exchange(other._handle, {}) }
-    , _id{ std::exchange(other._id, InvalidFibreValue) }
+    , _id{ std::exchange(other._id, Id{}) }
     , _name{ std::exchange(other._name, {}) }
     , _cancel{ std::exchange(other._cancel, false) }
   {}
@@ -159,6 +175,9 @@ public:
   [[nodiscard]] int32_t priority() const { return _priority; }
 
   void __setPriority(int32_t p) { _priority = p; }
+
+  /// Checks if this is a valid fibre.
+  [[nodiscard]] bool valid() const noexcept { return _id.valid(); }
 
   /// Check if the fibre has completed execution.
   [[nodiscard]] bool done() const noexcept { return !_handle || _handle.done() || _cancel; }
@@ -202,16 +221,20 @@ public:
 private:
   [[nodiscard]] static IdValueType nextId()
   {
-    IdValueType id = _next_id++;
-    if (id == InvalidFibreValue) [[unlikely]]
+    // We increment by 2 to avoid the running bit.
+    constexpr uint64_t increment = 2;
+    IdValueType id = (_next_id += increment);
+    if ((id | Id::RunningBit) == InvalidFibreValue) [[unlikely]]
     {
-      id = _next_id++;
+      id = (_next_id += increment);
     }
     return id;
   }
 
+  void flagNotRunning() noexcept { _id.setRunning(false); }
+
   std::coroutine_handle<promise_type> _handle;
-  IdValueType _id = InvalidFibreValue;
+  Id _id{};
   int32_t _priority = 0;
   std::string _name;
   bool _cancel = true;

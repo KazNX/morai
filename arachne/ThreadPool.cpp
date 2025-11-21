@@ -135,7 +135,7 @@ Fibre ThreadPool::nextFibre()
   for (auto &queue : _fibre_queues)
   {
     Fibre fibre = queue->pop();
-    if (fibre.id() != InvalidFibre)
+    if (fibre.valid())
     {
       return fibre;
     }
@@ -197,7 +197,7 @@ bool ThreadPool::updateNextFibre()
 {
   // Get the next priority fibre.
   Fibre fibre = nextFibre();
-  if (fibre.id() == InvalidFibre)
+  if (!fibre.valid())
   {
     return false;
   }

@@ -1,8 +1,6 @@
 #include "FibreQueue.hpp"
 
 #include <algorithm>
-#include <ranges>
-#include "Common.hpp"
 
 namespace arachne
 {
@@ -91,7 +89,7 @@ void FibreQueue::grow()
 
 bool FibreQueue::cancel(const Id &id)
 {
-  if (id.id == InvalidFibreValue)
+  if (!id.valid())
   {
     return false;
   }

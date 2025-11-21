@@ -1,25 +1,14 @@
 #pragma once
 
-#include <cstddef>
 #include <functional>
 
 namespace arachne
 {
-using IdValueType = uint64_t;
-constexpr auto InvalidFibreValue = ~static_cast<IdValueType>(0);
-
-struct Id
+struct SchedulerParams
 {
-  IdValueType id = InvalidFibreValue;
+  uint32_t initial_queue_size = 1024u;
+  std::vector<int32_t> priority_levels{};
 };
-
-constexpr Id InvalidFibre{ .id = InvalidFibreValue };
-using WaitCondition = std::function<bool()>;
-
-inline bool operator==(const Id &lhs, const Id &rhs) noexcept
-{
-  return lhs.id == rhs.id;
-}
 
 struct Time
 {
@@ -27,11 +16,7 @@ struct Time
   double dt = 0.0;
 };
 
-struct SchedulerParams
-{
-  uint32_t initial_queue_size = 1024u;
-  std::vector<int32_t> priority_levels{};
-};
+using WaitCondition = std::function<bool()>;
 
 constexpr uint8_t nextPowerOfTwo(uint8_t value)
 {
