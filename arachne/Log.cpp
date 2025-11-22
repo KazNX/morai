@@ -20,10 +20,25 @@ std::string_view level_name(const Level level)
 void default_hook(const Level level, std::string_view msg)
 {
   std::cout << std::format("[{}]: {}", level_name(level), msg) << '\n';
+  if (level == Level::Fatal) [[unlikely]]
+  {
+    throw std::runtime_error(std::string{ msg });
+  }
 }
 
 std::function<void(Level, std::string_view)> hook = &default_hook;
+std::atomic_int active_level{ static_cast<int>(Level::Info) };
 }  // namespace
+
+void setActiveLevel(Level level)
+{
+  active_level = static_cast<int>(level);
+}
+
+Level activeLevel()
+{
+  return static_cast<Level>(active_level.load());
+}
 
 void setHook(std::function<void(Level, std::string_view)> new_hook)
 {
@@ -37,6 +52,11 @@ void clearHook()
 
 void log(const Level level, std::string_view msg)
 {
+  if (static_cast<int>(level) < static_cast<int>(activeLevel()))
+  {
+    return;
+  }
+
   hook(level, std::string{ msg });
 }
 }  // namespace arachne::log

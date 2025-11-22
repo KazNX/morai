@@ -31,10 +31,12 @@ struct ThreadPoolParams : public SchedulerParams
 /// @c ThreadPoolParams::worker_count - which continually pop tasks then return them to the worker
 /// queues.
 ///
+/// The @c ThreadPool also supports priority scheduling. Workers prefer draining higher priority
+/// (lower value) queues.
+///
 /// @c ThreadPool::worker_count may be zero in which case the user must call @c update() must be
 /// called to process tasks. This can be used to control the thread pool manually.
-///
-/// Unlike the @c Scheduler, the @c ThreadPool has fixed size queues. Calling @c start() blocks
+////// Unlike the @c Scheduler, the @c ThreadPool has fixed size queues. Calling @c start() blocks
 /// until there is space in the queue to add the new fibre to the target priority queue. As such
 /// it is possible to deadlock the thread pool as all workers try to push back their fibre to a full
 /// queue. There is current no solution to this issue.
@@ -66,8 +68,8 @@ public:
   /// @c fibre::Fibre return type.
   ///
   /// @code
-  /// arachne::Scheduler scheduler;
-  /// arachne::Id fibre_id = scheduler.start([]() -> arachne::Fibre {
+  /// arachne::ThreadPool pool;
+  /// arachne::Id fibre_id = pool.start([]() -> arachne::Fibre {
   ///   std::cout << "Fibre started\n";
   ///   co_await 1.0; // Sleep for one second
   ///   std::cout << "Fibre done\n";
@@ -75,8 +77,11 @@ public:
   /// @endcode
   ///
   /// @param fibre The fibre entry point.
+  /// @param priority Scheduling priority.
+  /// @param name Optional name.
   /// @return The fibre @c Id. Maybe used for cancellation or @c await().
   Id start(Fibre &&fibre, int32_t priority = 0, std::string_view name = {});
+  /// @overload
   Id start(Fibre &&fibre, std::string_view name)
   {
     return start(std::move(fibre), 0, std::move(name));
@@ -99,8 +104,8 @@ public:
 
   /// Wait for all tasks to complete within the specified timeout.
   ///
-  /// Note this stops waiting if at any point the queues are empty. However, this can happen because
-  /// all tasks have been moved to worker threads so there's no guarantee that all tasks are
+  /// Note this stops waiting if at any point the #queues are empty. However, this can happen
+  /// because all tasks have been moved to worker threads so there's no guarantee that all tasks are
   /// complete. Additionally, the return value comes after the loop condition is checked, so it's
   /// also possible to return false before the timeout elapses.
   ///
@@ -108,21 +113,25 @@ public:
   /// @return True of the queues are empty (unreliable).
   bool wait(std::optional<std::chrono::milliseconds> timeout = std::nullopt);
 
-  /// Move a fibre into this scheduler (threadsafe).
+  /// Move a fibre into the task pool (threadsafe). This implements the scheduler move operations.
+  ///
+  /// The fibre is added to a threadsafe queue which is drained during @c update(). Note that
+  /// deadlocks may be possible as the threadsafe queue blocks when full.
   void move(Fibre &&fibre);
 
 private:
   SharedQueue &selectQueue(int32_t priority, bool quiet);
   void pushFibre(Fibre &&fibre);
   [[nodiscard]] Fibre nextPriorityFibre();
-  [[nodiscard]] Fibre nextFibre();
+  [[nodiscard]] Fibre nextFibre(uint32_t &selection_index);
 
   void createQueues(ThreadPoolParams &params);
   void startWorkers(ThreadPoolParams &params);
   void workerThread(int32_t thread_index, std::chrono::milliseconds idle_sleep_duration);
-  bool updateNextFibre();
+  bool updateNextFibre(uint32_t &selection_index);
 
   std::vector<std::unique_ptr<SharedQueue>> _fibre_queues;
+  std::vector<uint32_t> _queue_weighted_selection;
   std::vector<std::jthread> _workers;
   std::atomic_flag _paused = ATOMIC_FLAG_INIT;
   std::atomic_flag _quit = ATOMIC_FLAG_INIT;

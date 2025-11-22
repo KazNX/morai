@@ -41,6 +41,9 @@ namespace arachne
 ///   - `co_await []() -> bool { ... };` - resume when the lambda returns true (alternative
 ///     preferred)
 ///   - `co_yield fibre::wait(condition[, timeout]);` - supported alternative
+/// - `co_await <Id>` wait for another fibre to complete by waiting on its @c Id.
+///   Skipped if the @c Id is not valid.
+/// - `co_await moveTo(other_scheduler);` - move to another scheduler. See @c SchedulerType
 /// - `co_return;` - end fibre execution. Implicit on reaching the end of the function.'
 ///
 /// All @c co_await expressions will continue immediately if the condition is already met (not
@@ -65,17 +68,23 @@ namespace arachne
 /// }
 /// @endcode
 ///
+/// The scheduler supports a set of fixed priorities which results in multiple queues. Each queue is
+/// drained in priority order - lowest value to highest. The fibre priority is set on @c start()
+/// and the closest lower bound priority is used, though an error is logged on a priority mismatch.
+/// A fibre moved from another scheduler may trigger the same mismatch error.
+///
 /// Other notes:
 ///
 /// - A @c fibre::Scheduler is not itself thread-safe.
 /// - Multiple fibre systems may exist both on the same thread or across multiple threads.
-/// - Fibres may not be moved between fibre systems.
+/// - Fibres may be moved between fibre systems only from within the fibre using
+///   `co_await moveTo(other_scheduler);`
 /// - @c gls::finally() patterns may be used to ensure some fibre cleanup code is always executed.
+///   - See @c arachne::finally()
 /// - Fibres may start other fibres in the same @c Scheduler so long as they have access to the
 ///   @c Scheduler. New fibres are updated on the *next* @c update() call.
 /// - Fibres may cancel other fibres in the same @c Scheduler. This prevents any further updates of
-/// the
-///   target fibre.
+///   the target fibre.
 class Scheduler
 {
 public:
@@ -100,6 +109,7 @@ public:
     return count + _move_queue.size();
   }
 
+  /// get the internal time value. Based on the last @c update() call.
   [[nodiscard]] const Time &time() const noexcept { return _time; }
 
   /// Start a fibre.
@@ -118,8 +128,11 @@ public:
   /// @endcode
   ///
   /// @param fibre The fibre entry point.
+  /// @param priority Scheduling priority.
+  /// @param name Optional name.
   /// @return The fibre @c Id. Maybe used for cancellation or @c co_await.
   Id start(Fibre &&fibre, int32_t priority = 0, std::string_view name = {});
+  /// @overload
   Id start(Fibre &&fibre, std::string_view name)
   {
     return start(std::move(fibre), 0, std::move(name));
@@ -143,7 +156,10 @@ public:
   /// reasonable default.
   void update(double epoch_time_s);
 
-  /// Move a fibre into this scheduler (threadsafe).
+  /// Move a fibre into this scheduler (threadsafe). This implements the scheduler move operations.
+  ///
+  /// The fibre is added to a threadsafe queue which is drained during @c update(). Note that
+  /// deadlocks may be possible as the threadsafe queue blocks when full.
   void move(Fibre &&fibre);
 
 private:

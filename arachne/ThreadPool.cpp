@@ -9,6 +9,27 @@
 
 namespace arachne
 {
+namespace
+{
+void generateQueueSelectionSet(std::vector<uint32_t> &set, uint32_t queue_count)
+{
+  // Simple weighting: given 4 queues, we generate:
+  //  { 0, 0, 0, 0, 1, 1, 1, 2, 2, 3 }
+  // - Update [0] 4 times
+  // - Update [1] 3 times
+  // - Update [2] 2 times
+  // - Update [3] 1 times
+  for (uint32_t i = 0; i < queue_count; ++i)
+  {
+    const auto weighting = (queue_count - i);
+    for (uint32_t j = 0; j < weighting; ++j)
+    {
+      set.emplace_back(i);
+    }
+  }
+}
+}  // namespace
+
 ThreadPool::ThreadPool(ThreadPoolParams params)
   : _idle_sleep_duration(params.idle_sleep_duration)
 {
@@ -75,9 +96,10 @@ void ThreadPool::cancelAll()
 
 void ThreadPool::update(std::function<bool()> continue_condition)
 {
+  uint32_t selection_index = 0;
   while (continue_condition())
   {
-    if (!updateNextFibre())
+    if (!updateNextFibre(selection_index))
     {
       break;
     }
@@ -145,11 +167,15 @@ void ThreadPool::pushFibre(Fibre &&fibre)
   queue.push(std::move(fibre));
 }
 
-Fibre ThreadPool::nextFibre()
+Fibre ThreadPool::nextFibre(uint32_t &selection_index)
 {
-  for (auto &queue : _fibre_queues)
+  // FIXME: this will result in low priority starvation.
+  for (size_t i = 0; i < _queue_weighted_selection.size(); ++i)
   {
-    Fibre fibre = queue->pop();
+    SharedQueue &queue = *_fibre_queues.at(_queue_weighted_selection.at(selection_index));
+    selection_index = selection_index =
+      (selection_index + 1u) % static_cast<uint32_t>(_queue_weighted_selection.size());
+    Fibre fibre = queue.pop();
     if (fibre.valid())
     {
       return fibre;
@@ -165,6 +191,8 @@ void ThreadPool::createQueues(ThreadPoolParams &params)
   {
     params.priority_levels.push_back(0);
   }
+
+  generateQueueSelectionSet(_queue_weighted_selection, params.priority_levels.size());
 
   std::ranges::sort(params.priority_levels);
 
@@ -199,19 +227,20 @@ void ThreadPool::startWorkers(ThreadPoolParams &params)
 
 void ThreadPool::workerThread(int32_t thread_index, std::chrono::milliseconds idle_sleep_duration)
 {
+  uint32_t selection_index = 0;
   while (!_quit.test())
   {
-    if (_paused.test() || !updateNextFibre())
+    if (_paused.test() || !updateNextFibre(selection_index))
     {
       std::this_thread::sleep_for(idle_sleep_duration);
     }
   }
 }
 
-bool ThreadPool::updateNextFibre()
+bool ThreadPool::updateNextFibre(uint32_t &selection_index)
 {
   // Get the next priority fibre.
-  Fibre fibre = nextFibre();
+  Fibre fibre = nextFibre(selection_index);
   if (!fibre.valid())
   {
     return false;
