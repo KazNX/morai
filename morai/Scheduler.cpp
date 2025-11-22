@@ -80,9 +80,9 @@ void Scheduler::update(const double epoch_time_s)
   }
 }
 
-void Scheduler::move(Fibre &&fibre)
+Fibre Scheduler::move(Fibre &&fibre)
 {
-  _move_queue.push(std::move(fibre));
+  return _move_queue.push(std::move(fibre));
 }
 
 Id Scheduler::enqueue(Fibre &&fibre)

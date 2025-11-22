@@ -14,9 +14,41 @@ struct SchedulerParams
 
 class Fibre;
 
+/// Concept required to for supporting `co_await morai::moveTo()` operations. A fibre can be moved
+/// to any object that supports the function signature:
+///
+/// - `Fibre move(Fibre &&fibre);`
+///
+/// There are some odd constraints here. The @c Fibre is moved to the target function. If the move
+/// operation can succeed, then the @c move() function should return an empty/invalid fibre:
+/// @c Fibre{} . On failure, the function should return the incoming fibre as shown below.
+///
+/// @code
+/// Fibre move(Fibre &&fibre)
+/// {
+///   SharedQueue &queue = /* get target SharedQueue */;
+///   return queue.push(std::move(fibre));
+/// }
+/// @endcode
+///
+/// On success, the fibre is essentially moved to the target queue. On failure the fibre is
+/// temporarily move to the queue, then returned by the queue and moved out of the function.
+///
+/// Another example below, shows a move attempt that always fails:
+///
+/// @code
+/// Fibre move(Fibre &&fibre)
+/// {
+///   // Always move the fibre back out.
+///   return std::move(fibre);
+/// }
+/// @endcode
+///
+/// This odd ownership movement allows calling code to deal with potential deadlocks where the
+/// target @c SharedQueue is full.
 template <typename Scheduler>
 concept SchedulerType = requires(Scheduler &schduler, Fibre &&fibre) {
-  { schduler.move(std::move(fibre)) } -> std::same_as<void>;
+  { schduler.move(std::move(fibre)) } -> std::same_as<Fibre>;
 };
 
 struct Time

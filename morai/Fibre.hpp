@@ -26,7 +26,7 @@ struct Frame
   Id id{};
   int32_t priority = 0;
   std::string name;
-  std::function<void(Fibre &&)> move_operation{};
+  std::function<Fibre(Fibre &&)> move_operation{};
   bool cancel = true;
 };
 }  // namespace detail
@@ -283,6 +283,8 @@ public:
     return id;
   }
 
+  std::coroutine_handle<promise_type> __release() { return std::exchange(_handle, {}); }
+
 private:
   void flagNotRunning() noexcept { _handle.promise().frame.id.setRunning(false); }
 
@@ -299,7 +301,7 @@ void Fibre::MoveAwaitable<Scheduler>::await_suspend(
   if (target)
   {
     handle.promise().frame.move_operation = [target = this->target](Fibre &&fibre) {
-      target->move(std::move(fibre));
+      return target->move(std::move(fibre));
     };
     target = nullptr;
   }

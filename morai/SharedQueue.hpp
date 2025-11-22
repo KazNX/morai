@@ -5,6 +5,7 @@
 #include "MPMCQueue.hpp"
 
 #include <atomic>
+#include <coroutine>
 
 namespace morai
 {
@@ -30,7 +31,13 @@ public:
   [[nodiscard]] size_t size() const { return _queue.size(); }
   [[nodiscard]] bool empty() const { return _queue.empty(); }
 
-  void push(Fibre &&fibre);
+  /// Try push into the shared queue. This may fail when full in which case the return value must
+  /// be captured. This can be used to address potential deadlock issues.
+  ///
+  /// @param fibre The fibre to move to the queue.
+  /// @return An invalid fibre - @c Fibre::valid() is false - on success, or the same fibre back
+  /// on failure (queue full).
+  [[nodiscard]] Fibre push(Fibre &&fibre);
 
   /// Pop the next item off the queue.
   [[nodiscard]] Fibre pop();
@@ -40,7 +47,8 @@ public:
   void clear();
 
 private:
-  rigtorp::MPMCQueue<Fibre> _queue;
+  /// Stores @c Fibre internals rather than a @c Fibre so we can deal with @c try_push() failing.
+  rigtorp::MPMCQueue<std::coroutine_handle<Fibre::promise_type>> _queue;
   int32_t _priority = 0;
 };
 }  // namespace morai

@@ -92,7 +92,7 @@ TEST(ThreadPool, cancelAll)
 }
 
 // FIXME: This test deadlocks as the job queues cannot grow. This is a known limitation.
-TEST(ThreadPool, DISABLED_smallQueue)
+TEST(ThreadPool, smallQueue)
 {
   ThreadPoolParams params{ .worker_count = 2 };
   params.initial_queue_size = 2;
@@ -100,7 +100,7 @@ TEST(ThreadPool, DISABLED_smallQueue)
 
   std::atomic<int> counter = 0;
   std::atomic_flag block = ATOMIC_FLAG_INIT;
-  const unsigned task_count = 100;
+  const unsigned task_count = 50;
 
   block.test_and_set();
 

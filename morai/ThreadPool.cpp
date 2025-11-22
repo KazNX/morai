@@ -6,6 +6,7 @@
 #include "SharedQueue.hpp"
 
 #include <algorithm>
+#include <thread>
 
 namespace morai
 {
@@ -80,7 +81,15 @@ Id ThreadPool::start(Fibre &&fibre, int32_t priority, std::string_view name)
   fibre.__setPriority(priority);
   fibre.setName(name);
   SharedQueue &fibres = selectQueue(priority, false);
-  fibres.push(std::move(fibre));
+  while (fibre.valid())
+  {
+    fibre = std::move(fibres.push(std::move(fibre)));
+    if (fibre.valid())
+    {
+      // Full. Sleep and try again.
+      std::this_thread::sleep_for(_idle_sleep_duration);
+    }
+  }
   return fibre_id;
 }
 
@@ -126,11 +135,11 @@ bool ThreadPool::wait(std::optional<std::chrono::milliseconds> timeout)
   return empty();
 }
 
-void ThreadPool::move(Fibre &&fibre)
+Fibre ThreadPool::move(Fibre &&fibre)
 {
   // Unlike scheduler, we can directly insert into the target queue as they are all threadsafe.
   SharedQueue &queue = selectQueue(fibre.priority(), false);
-  queue.push(std::move(fibre));
+  return queue.push(std::move(fibre));
 }
 
 SharedQueue &ThreadPool::selectQueue(int32_t priority, bool quiet)
@@ -161,10 +170,10 @@ SharedQueue &ThreadPool::selectQueue(int32_t priority, bool quiet)
   return queue;
 }
 
-void ThreadPool::pushFibre(Fibre &&fibre)
+Fibre ThreadPool::pushFibre(Fibre &&fibre)
 {
   SharedQueue &queue = selectQueue(fibre.priority(), true);
-  queue.push(std::move(fibre));
+  return queue.push(std::move(fibre));
 }
 
 Fibre ThreadPool::nextFibre(uint32_t &selection_index)
@@ -241,40 +250,45 @@ bool ThreadPool::updateNextFibre(uint32_t &selection_index)
 {
   // Get the next priority fibre.
   Fibre fibre = nextFibre(selection_index);
-  if (!fibre.valid())
+  while (fibre.valid())
   {
-    return false;
-  }
-
-  const double epoch_time_s = std::chrono::system_clock::now().time_since_epoch().count();
-  const Resume resume = fibre.resume(epoch_time_s);
-  if (resume.mode == ResumeMode::Expire || resume.mode == ResumeMode::Moved) [[unlikely]]
-  {
-    // Expire the fibre.
-    return true;
-  }
-
-  if (resume.mode == ResumeMode::Exception) [[unlikely]]
-  {
-    // Propagate exception and expire.
-    std::exception_ptr ex = fibre.exception();
-    // TODO: Log exception
-    return true;  // Unreachable.
-  }
-
-  if (resume.reschedule) [[unlikely]]
-  {
-    const Priority reschedule = *resume.reschedule;
-    const int32_t initial_priority = fibre.priority();
-    if (initial_priority != reschedule.priority)
+    const double epoch_time_s = std::chrono::system_clock::now().time_since_epoch().count();
+    const Resume resume = fibre.resume(epoch_time_s);
+    if (resume.mode == ResumeMode::Expire || resume.mode == ResumeMode::Moved) [[unlikely]]
     {
-      SharedQueue &new_queue = selectQueue(reschedule.priority, true);
-      // Update fibre priority and reschedule.
-      fibre.__setPriority(reschedule.priority);
+      // Expire the fibre.
+      return true;
+    }
+
+    if (resume.mode == ResumeMode::Exception) [[unlikely]]
+    {
+      // Propagate exception and expire.
+      std::exception_ptr ex = fibre.exception();
+      // TODO: Log exception
+      return true;  // Unreachable.
+    }
+
+    if (resume.reschedule) [[unlikely]]
+    {
+      const Priority reschedule = *resume.reschedule;
+      const int32_t initial_priority = fibre.priority();
+      if (initial_priority != reschedule.priority)
+      {
+        SharedQueue &new_queue = selectQueue(reschedule.priority, true);
+        // Update fibre priority and reschedule.
+        fibre.__setPriority(reschedule.priority);
+      }
+    }
+
+    // Try requeue the fibre. This may fail if the queue is full. In this case we'll update the
+    // fibre again, hoping the queues will free up. While this avoids a total deadlock, it can still
+    // result in fibre starvation.
+    fibre = std::move(pushFibre(std::move(fibre)));
+    if (!fibre.valid())
+    {
+      return true;
     }
   }
-
-  pushFibre(std::move(fibre));
-  return true;
+  return false;
 }
 }  // namespace morai

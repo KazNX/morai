@@ -36,10 +36,11 @@ struct ThreadPoolParams : public SchedulerParams
 ///
 /// @c ThreadPool::worker_count may be zero in which case the user must call @c update() must be
 /// called to process tasks. This can be used to control the thread pool manually.
-////// Unlike the @c Scheduler, the @c ThreadPool has fixed size queues. Calling @c start() blocks
+/// Unlike the @c Scheduler, the @c ThreadPool has fixed size queues. Calling @c start() blocks
 /// until there is space in the queue to add the new fibre to the target priority queue. As such
 /// it is possible to deadlock the thread pool as all workers try to push back their fibre to a full
-/// queue. There is current no solution to this issue.
+/// queue. There is current no solution to this issue. This process also sleeps the pushing thread
+/// for @c ThreadPoolParams::idle_sleep_duration so pushing to a full queue is expensive.
 class ThreadPool
 {
 public:
@@ -117,11 +118,11 @@ public:
   ///
   /// The fibre is added to a threadsafe queue which is drained during @c update(). Note that
   /// deadlocks may be possible as the threadsafe queue blocks when full.
-  void move(Fibre &&fibre);
+  Fibre move(Fibre &&fibre);
 
 private:
   SharedQueue &selectQueue(int32_t priority, bool quiet);
-  void pushFibre(Fibre &&fibre);
+  [[nodiscard]] Fibre pushFibre(Fibre &&fibre);
   [[nodiscard]] Fibre nextPriorityFibre();
   [[nodiscard]] Fibre nextFibre(uint32_t &selection_index);
 

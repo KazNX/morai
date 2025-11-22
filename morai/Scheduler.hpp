@@ -160,7 +160,7 @@ public:
   ///
   /// The fibre is added to a threadsafe queue which is drained during @c update(). Note that
   /// deadlocks may be possible as the threadsafe queue blocks when full.
-  void move(Fibre &&fibre);
+  Fibre move(Fibre &&fibre);
 
 private:
   Id enqueue(Fibre &&fibre);

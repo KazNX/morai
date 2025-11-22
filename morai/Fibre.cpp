@@ -72,8 +72,15 @@ Fibre::~Fibre()
   if (_handle.promise().frame.move_operation)
   {
     auto move_op = std::exchange(_handle.promise().frame.move_operation, {});
-    move_op(std::move(*this));
-    return { ResumeMode::Moved };
+    *this = std::move(move_op(std::move(*this)));
+    if (!this->valid())
+    {
+      return { ResumeMode::Moved };
+    }
+    // Move failed. Target queue may be full. Return ownership to this object and try again next
+    // update.
+    std::swap(_handle.promise().frame.move_operation, move_op);
+    return { .mode = ResumeMode::Continue };
   }
 
   // Add the epoch time to the resumption value to set the correct resume time.
