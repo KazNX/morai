@@ -6,6 +6,6 @@ add_executable(fibre_tests
 
 target_link_libraries(fibre_tests
   PRIVATE
-    arachne
+    morai
     gtest_main
 )

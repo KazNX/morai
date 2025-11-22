@@ -1,5 +1,5 @@
 #include "SharedQueue.hpp"
-namespace arachne
+namespace morai
 {
 SharedQueue::SharedQueue(int32_t priority, uint32_t capacity)
   : _queue{ capacity }
@@ -30,4 +30,4 @@ void SharedQueue::clear()
     std::ignore = pop();
   }
 }
-}  // namespace arachne
+}  // namespace morai

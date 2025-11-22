@@ -9,7 +9,7 @@
 #include <thread>
 #include <string_view>
 
-namespace arachne
+namespace morai
 {
 struct ThreadPoolParams : public SchedulerParams
 {
@@ -68,8 +68,8 @@ public:
   /// @c fibre::Fibre return type.
   ///
   /// @code
-  /// arachne::ThreadPool pool;
-  /// arachne::Id fibre_id = pool.start([]() -> arachne::Fibre {
+  /// morai::ThreadPool pool;
+  /// morai::Id fibre_id = pool.start([]() -> morai::Fibre {
   ///   std::cout << "Fibre started\n";
   ///   co_await 1.0; // Sleep for one second
   ///   std::cout << "Fibre done\n";
@@ -137,4 +137,4 @@ private:
   std::atomic_flag _quit = ATOMIC_FLAG_INIT;
   std::chrono::milliseconds _idle_sleep_duration{ 1 };
 };
-}  // namespace arachne
+}  // namespace morai

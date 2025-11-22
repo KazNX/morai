@@ -1,4 +1,4 @@
-#include <arachne/Scheduler.hpp>
+#include <morai/Scheduler.hpp>
 
 #include <weaver/Input.hpp>
 #include <weaver/Weaver.hpp>
@@ -41,7 +41,7 @@ constexpr auto MODE_SWITCH_KEY = weaver::Key::Tab;
 struct GlobalState
 {
   /// Fibre scheduler. Only one is used.
-  arachne::Scheduler scheduler;
+  morai::Scheduler scheduler;
   /// Screen display.
   weaver::Screen screen;
   /// Input key handler.
@@ -80,7 +80,7 @@ struct GlobalState
 struct Launcher
 {
   weaver::Coord position;
-  arachne::Id fibre;
+  morai::Id fibre;
 };
 
 /// Spark(le) state variables.
@@ -94,7 +94,7 @@ struct Spark
 };
 
 /// Starts a fizzle effect at the given position. Sparkles for @p duration before expiring.
-arachne::Fibre fizzle(std::shared_ptr<GlobalState> state, weaver::Coord position, float duration)
+morai::Fibre fizzle(std::shared_ptr<GlobalState> state, weaver::Coord position, float duration)
 {
   const std::array sprites = {
     weaver::character('.', state->colour_pairs[1]),  //
@@ -125,7 +125,7 @@ arachne::Fibre fizzle(std::shared_ptr<GlobalState> state, weaver::Coord position
 
 /// Starts a firework spark, which moves at the given velocity with gravity applied.
 /// Drops @c fizzle() effects as it moves and expires.
-arachne::Fibre spark(std::shared_ptr<GlobalState> state, Spark spark, weaver::Colour colour)
+morai::Fibre spark(std::shared_ptr<GlobalState> state, Spark spark, weaver::Colour colour)
 {
   const uint8_t colour_pair =
     state->colour_pairs[static_cast<size_t>(colour) % state->colour_pairs.size()];
@@ -170,8 +170,8 @@ arachne::Fibre spark(std::shared_ptr<GlobalState> state, Spark spark, weaver::Co
 }
 
 /// Firework explosion. Spawns @c spark() fibres.
-arachne::Fibre explode(std::shared_ptr<GlobalState> state, weaver::Coord position,
-                       weaver::Colour colour)
+morai::Fibre explode(std::shared_ptr<GlobalState> state, weaver::Coord position,
+                     weaver::Colour colour)
 {
   // Spawn half the sparks immediately, then intermittently spawn the rest
   std::uniform_int_distribution spark_count_dist(SPARKS.min, SPARKS.max);
@@ -198,7 +198,7 @@ arachne::Fibre explode(std::shared_ptr<GlobalState> state, weaver::Coord positio
 }
 
 /// Firework rocket fibre. Ascends then explodes.
-arachne::Fibre rocket(std::shared_ptr<GlobalState> state, weaver::Coord position)
+morai::Fibre rocket(std::shared_ptr<GlobalState> state, weaver::Coord position)
 {
   // Choose a random colour, but not black.
   const auto colour = static_cast<weaver::Colour>(
@@ -221,7 +221,7 @@ arachne::Fibre rocket(std::shared_ptr<GlobalState> state, weaver::Coord position
 }
 
 /// User controller launcher fibre.
-arachne::Fibre launcherUser(std::shared_ptr<GlobalState> state, std::shared_ptr<Launcher> launcher)
+morai::Fibre launcherUser(std::shared_ptr<GlobalState> state, std::shared_ptr<Launcher> launcher)
 {
   double last_launch_time = -1.0;
 
@@ -262,7 +262,7 @@ arachne::Fibre launcherUser(std::shared_ptr<GlobalState> state, std::shared_ptr<
 }
 
 /// Autonatic launcher fibre.
-arachne::Fibre launcherAuto(std::shared_ptr<GlobalState> state, std::shared_ptr<Launcher> launcher)
+morai::Fibre launcherAuto(std::shared_ptr<GlobalState> state, std::shared_ptr<Launcher> launcher)
 {
   std::uniform_int_distribution<int> position_dist(1, state->screen.size().width - 2);
   std::uniform_real_distribution<double> launch_delay_dist(AUTO_LAUNCH_WINDOW.min,
@@ -295,7 +295,7 @@ arachne::Fibre launcherAuto(std::shared_ptr<GlobalState> state, std::shared_ptr<
 }
 
 /// Launcher selector. Toggles running user and automatic launchers as one expires.
-arachne::Fibre launcher(std::shared_ptr<GlobalState> state, std::shared_ptr<Launcher> launcher)
+morai::Fibre launcher(std::shared_ptr<GlobalState> state, std::shared_ptr<Launcher> launcher)
 {
   launcher->position.x = state->screen.size().width / 2;
   launcher->position.y = state->screen.size().height - 2;
@@ -310,7 +310,7 @@ arachne::Fibre launcher(std::shared_ptr<GlobalState> state, std::shared_ptr<Laun
 }
 
 /// Rendering fibre.
-arachne::Fibre render(std::shared_ptr<GlobalState> state)
+morai::Fibre render(std::shared_ptr<GlobalState> state)
 {
   for (;;)
   {
@@ -322,7 +322,7 @@ arachne::Fibre render(std::shared_ptr<GlobalState> state)
 }
 
 /// Input handling fibre.
-arachne::Fibre input(std::shared_ptr<GlobalState> state)
+morai::Fibre input(std::shared_ptr<GlobalState> state)
 {
   for (;;)
   {
@@ -354,7 +354,7 @@ int parseArgs(Options &options, int argc, char *argv[])
   {
     cxxopts::Options cmd_options(
       "Fireworks",
-      R"(A terminal based fireworks display showing some basic Arachne fibre usage patterns.
+      R"(A terminal based fireworks display showing some basic Morai fibre usage patterns.
 These are not necessarily good patterns, just demonstrative patterns.
 
 Keys:

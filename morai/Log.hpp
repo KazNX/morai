@@ -7,7 +7,7 @@
 
 /// Logging interface. Provides a @c LogHook which can be set via @c setHook(). All log calls go via
 /// this hook. The default logs to stdout.
-namespace arachne::log
+namespace morai::log
 {
 /// Logging level options.
 enum class Level : int8_t
@@ -64,4 +64,4 @@ inline void fatal(std::string_view msg)
 {
   log(Level::Fatal, msg);
 }
-}  // namespace arachne::log
+}  // namespace morai::log

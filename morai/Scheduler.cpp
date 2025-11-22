@@ -4,7 +4,7 @@
 
 #include <algorithm>
 
-namespace arachne
+namespace morai
 {
 Scheduler::Scheduler(SchedulerParams params)
   : _move_queue(0, params.move_queue_size)
@@ -195,4 +195,4 @@ void Scheduler::pumpMoveQueue()
     enqueue(std::move(fibre));
   }
 }
-}  // namespace arachne
+}  // namespace morai

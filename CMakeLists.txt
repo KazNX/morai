@@ -1,7 +1,7 @@
 # Project setup and minimum cmake version.
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
-project(arachne LANGUAGES CXX)
+project(morai LANGUAGES CXX)
 
 # C++ standards setup.
 if(NOT CMAKE_CXX_STANDARD)
@@ -19,7 +19,7 @@ include(tools)
 option(ARACHNE_BUILD_TESTS "Build unit tests?" ON)
 option(ARACHNE_BUILD_EXAMPLES "Build unit tests?" OFF)
 
-set(ConfigPackageLocation lib/cmake/arachne)
+set(ConfigPackageLocation lib/cmake/morai)
 
 # Ensure debug libraries are built with different named to release builds. This is to address issues such as MSVC
 # having different debug and release runtime libraries. For a well setup API, one which hides resource allocation and
@@ -46,7 +46,7 @@ endforeach()
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Include sub projects.
-add_subdirectory(arachne)
+add_subdirectory(morai)
 
 if(ARACHNE_BUILD_EXAMPLES)
   add_subdirectory(examples)

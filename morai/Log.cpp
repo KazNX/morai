@@ -5,7 +5,7 @@
 #include <iostream>
 #include <format>
 
-namespace arachne::log
+namespace morai::log
 {
 namespace
 {
@@ -59,4 +59,4 @@ void log(const Level level, std::string_view msg)
 
   hook(level, std::string{ msg });
 }
-}  // namespace arachne::log
+}  // namespace morai::log

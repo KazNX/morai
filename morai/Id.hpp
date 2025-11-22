@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <memory>
 
-namespace arachne
+namespace morai
 {
 using IdValueType = uint64_t;
 constexpr auto InvalidFibreValue = ~static_cast<IdValueType>(0);
@@ -60,4 +60,4 @@ inline bool operator==(const Id &lhs, const Id &rhs) noexcept
 {
   return lhs.id() == rhs.id();
 }
-}  // namespace arachne
+}  // namespace morai

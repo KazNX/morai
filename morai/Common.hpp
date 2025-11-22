@@ -3,7 +3,7 @@
 #include <functional>
 #include <type_traits>
 
-namespace arachne
+namespace morai
 {
 struct SchedulerParams
 {
@@ -84,4 +84,4 @@ constexpr uint64_t nextPowerOfTwo(uint64_t value)
   value |= value >> 32;
   return value + 1;
 }
-}  // namespace arachne
+}  // namespace morai

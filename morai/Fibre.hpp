@@ -10,7 +10,7 @@
 #include <optional>
 #include <utility>
 
-namespace arachne
+namespace morai
 {
 class Fibre;
 
@@ -304,22 +304,22 @@ void Fibre::MoveAwaitable<Scheduler>::await_suspend(
     target = nullptr;
   }
 }
-}  // namespace arachne
+}  // namespace morai
 
 
 namespace std
 {
 template <>
-struct less<arachne::Fibre>
+struct less<morai::Fibre>
 {
-  bool operator()(const arachne::Fibre &a, const arachne::Fibre &b) const
+  bool operator()(const morai::Fibre &a, const morai::Fibre &b) const
   {
     return a.priority() < b.priority();
   }
 };
 
 template <>
-inline void swap(arachne::Fibre &a, arachne::Fibre &b) noexcept
+inline void swap(morai::Fibre &a, morai::Fibre &b) noexcept
 {
   a.swap(b);
 }

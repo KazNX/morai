@@ -2,7 +2,7 @@
 
 #include "Common.hpp"
 
-namespace arachne
+namespace morai
 {
 class Fibre;
 
@@ -19,4 +19,4 @@ Scheduler *moveTo(Scheduler *scheduler)
 {
   return { .target = scheduler };
 }
-}  // namespace arachne
+}  // namespace morai

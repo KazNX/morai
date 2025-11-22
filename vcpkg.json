@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
-  "name": "arachne",
+  "name": "morai",
   "version-string": "0.1.0",
   "description": "A fibre/microthread library build on C++ coroutines.",
   "features": {

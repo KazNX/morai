@@ -3,7 +3,7 @@
 #include "Fibre.hpp"
 #include "Resumption.hpp"
 
-namespace arachne
+namespace morai
 {
 /// A single threaded fibre queue with priority insertion.
 ///
@@ -64,4 +64,4 @@ private:
   std::vector<Fibre> _buffer{};
   int32_t _priority = 0;
 };
-}  // namespace arachne
+}  // namespace morai

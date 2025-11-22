@@ -7,7 +7,7 @@
 #include <span>
 #include <string_view>
 
-namespace arachne
+namespace morai
 {
 /// Implements a single threaded fibre scheduler.
 ///
@@ -55,7 +55,7 @@ namespace arachne
 /// @code
 /// int main()
 /// {
-///   using namespace arachne;
+///   using namespace morai;
 ///   Scheduler fibres;     // Create the scheduler
 ///   startFibres(fibres);  // Start some fibres
 ///   while (!fibres.empty())
@@ -80,7 +80,7 @@ namespace arachne
 /// - Fibres may be moved between fibre systems only from within the fibre using
 ///   `co_await moveTo(other_scheduler);`
 /// - @c gls::finally() patterns may be used to ensure some fibre cleanup code is always executed.
-///   - See @c arachne::finally()
+///   - See @c morai::finally()
 /// - Fibres may start other fibres in the same @c Scheduler so long as they have access to the
 ///   @c Scheduler. New fibres are updated on the *next* @c update() call.
 /// - Fibres may cancel other fibres in the same @c Scheduler. This prevents any further updates of
@@ -119,8 +119,8 @@ public:
   /// @c fibre::Fibre return type.
   ///
   /// @code
-  /// arachne::Scheduler scheduler;
-  /// arachne::Id fibre_id = scheduler.start([]() -> arachne::Fibre {
+  /// morai::Scheduler scheduler;
+  /// morai::Id fibre_id = scheduler.start([]() -> morai::Fibre {
   ///   std::cout << "Fibre started\n";
   ///   co_await 1.0; // Sleep for one second
   ///   std::cout << "Fibre done\n";
@@ -174,4 +174,4 @@ private:
   SharedQueue _move_queue;
   Time _time{};
 };
-}  // namespace arachne
+}  // namespace morai

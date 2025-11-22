@@ -1,6 +1,6 @@
-#include <arachne/Finally.hpp>
-#include <arachne/Log.hpp>
-#include <arachne/Scheduler.hpp>
+#include <morai/Finally.hpp>
+#include <morai/Log.hpp>
+#include <morai/Scheduler.hpp>
 
 #include <gtest/gtest.h>
 
@@ -8,9 +8,9 @@
 #include <array>
 #include <ranges>
 #include <random>
-#include "arachne/Common.hpp"
+#include "morai/Common.hpp"
 
-namespace arachne
+namespace morai
 {
 Fibre ticker()
 {
@@ -50,7 +50,7 @@ TEST(Fibre, ticker)
 
 Fibre cancellation(bool *cleaned_up)
 {
-  [[maybe_unused]] const auto at_exit = arachne::finally([&cleaned_up]() {
+  [[maybe_unused]] const auto at_exit = morai::finally([&cleaned_up]() {
     if (cleaned_up)
     {
       *cleaned_up = true;
@@ -410,4 +410,4 @@ TEST(Fibre, incorrectPriority)
 
   EXPECT_EQ(log_failures, 3);
 }
-}  // namespace arachne
+}  // namespace morai

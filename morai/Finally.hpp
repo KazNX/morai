@@ -2,7 +2,7 @@
 
 #include <utility>
 
-namespace arachne
+namespace morai
 {
 /// FinalAction allows you to ensure something gets run at the end of a scope
 ///
@@ -52,7 +52,7 @@ private:
 /// @code
 /// void someFunction()
 /// {
-///   [[maybe_unused]] const auto on_exit = arachne::finally([]() {
+///   [[maybe_unused]] const auto on_exit = morai::finally([]() {
 ///     std::cout << "Leaving someFunction()\n";
 ///   });
 ///   // Function code here.
@@ -67,4 +67,4 @@ template <class F>
 {
   return FinalAction<std::decay_t<F>>{ std::forward<F>(action) };
 }
-}  // namespace arachne
+}  // namespace morai

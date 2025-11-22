@@ -1,12 +1,12 @@
-#include <arachne/Finally.hpp>
-#include <arachne/Move.hpp>
-#include <arachne/Scheduler.hpp>
+#include <morai/Finally.hpp>
+#include <morai/Move.hpp>
+#include <morai/Scheduler.hpp>
 
 #include <gtest/gtest.h>
 
 #include <array>
 
-namespace arachne
+namespace morai
 {
 TEST(Move, scheduler)
 {
@@ -55,4 +55,4 @@ TEST(Move, scheduler)
     state.schedulers[1 - initially_on].update(elapsed);
   }
 }
-}  // namespace arachne
+}  // namespace morai

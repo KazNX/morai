@@ -6,7 +6,7 @@
 
 #include <atomic>
 
-namespace arachne
+namespace morai
 {
 /// A multi-threaded, multi-producer, multi-consumer, lock free queue.
 ///
@@ -43,4 +43,4 @@ private:
   rigtorp::MPMCQueue<Fibre> _queue;
   int32_t _priority = 0;
 };
-}  // namespace arachne
+}  // namespace morai

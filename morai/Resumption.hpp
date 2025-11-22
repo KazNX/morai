@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <chrono>
 
-namespace arachne
+namespace morai
 {
 enum class PriorityPosition : int8_t
 {
@@ -59,7 +59,7 @@ inline Priority reschedule(int32_t priority, PriorityPosition position = Priorit
 /// Example usage:
 ///
 /// @code
-/// using namespace arachne;
+/// using namespace morai;
 ///
 /// Fibre fibre_entrypoint()
 /// {
@@ -81,7 +81,7 @@ inline Resumption yield()
 /// Example usage:
 ///
 /// @code
-/// using namespace arachne;
+/// using namespace morai;
 ///
 /// Fibre fibre_entrypoint()
 /// {
@@ -101,7 +101,7 @@ inline Resumption sleep(const double duration_s)
 /// Example usage:
 ///
 /// @code
-/// using namespace arachne;
+/// using namespace morai;
 ///
 /// Fibre fibre_entrypoint()
 /// {
@@ -128,7 +128,7 @@ Resumption sleep(const typename std::chrono::duration<Rep, Period> &duration)
 /// Example usage:
 ///
 /// @code
-/// using namespace arachne;
+/// using namespace morai;
 ///
 /// Fibre fibre_entrypoint(bool* condition_met)
 /// {
@@ -153,4 +153,4 @@ Resumption wait(WaitCondition condition,
   return Resumption{ .time_s = std::chrono::duration<double>(timeout_duration).count(),
                      .condition = std::move(condition) };
 }
-}  // namespace arachne
+}  // namespace morai

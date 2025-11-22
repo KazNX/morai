@@ -1,5 +1,5 @@
-add_library(arachne)
-target_sources(arachne
+add_library(morai)
+target_sources(morai
   PUBLIC
     Common.hpp
     Fibre.hpp
@@ -22,12 +22,12 @@ target_sources(arachne
     ThreadPool.cpp
 )
 
-target_compile_features(arachne
+target_compile_features(morai
   PRIVATE cxx_std_20
   INTERFACE cxx_std_20
 )
 
-target_include_directories(arachne
+target_include_directories(morai
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
 )

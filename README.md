@@ -1,13 +1,13 @@
-# Arachne fiber libraray
+# Morai fiber libraray
 
-Arachne is a fibre or microthread library implemented in C++ using C++ coroutine support. Fibres
+Morai is a fibre or microthread library implemented in C++ using C++ coroutine support. Fibres
 are a lightweight cooperative multi-tasking mechanism running in a single thread.
 
-## The Arachne name
+## The Morai name
 
-The name Arachne comes from Greek mythology. See [Wikipedia](https://en.wikipedia.org/wiki/Arachne).
-The name was chosen because Arachne was a very skilled mortal weaver, which relates to fibres and
-threads.
+The name Morai comes from Greek mythology. See [Wikipedia](https://en.wikipedia.org/wiki/Moirai).
+Morai is the name of the Three Fates, the weavers of destiny. The name is chose as weaving relates
+to fibres and threads.
 
 ## Requirements
 

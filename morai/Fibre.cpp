@@ -1,6 +1,6 @@
 #include "Fibre.hpp"
 
-namespace arachne
+namespace morai
 {
 void Fibre::Awaitable::await_suspend(std::coroutine_handle<promise_type> handle) noexcept
 {
@@ -84,4 +84,4 @@ Fibre::~Fibre()
   return { .mode = ResumeMode::Continue,
            .reschedule = std::exchange(promise.frame.reschedule, std::nullopt) };
 }
-}  // namespace arachne
+}  // namespace morai

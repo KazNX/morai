@@ -7,7 +7,7 @@ target_sources(fireworks
 
 target_link_libraries(fireworks
   PRIVATE
-    arachne
+    morai
     weaver
     cxxopts
 )

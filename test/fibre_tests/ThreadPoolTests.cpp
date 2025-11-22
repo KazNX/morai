@@ -1,5 +1,5 @@
-#include <arachne/Finally.hpp>
-#include <arachne/ThreadPool.hpp>
+#include <morai/Finally.hpp>
+#include <morai/ThreadPool.hpp>
 #include <chrono>
 #include <format>
 
@@ -7,7 +7,7 @@
 
 #include <format>
 
-namespace arachne
+namespace morai
 {
 TEST(ThreadPool, simple)
 {
@@ -132,4 +132,4 @@ TEST(ThreadPool, DISABLED_smallQueue)
   EXPECT_EQ(counter.load(std::memory_order_relaxed), task_count);
   EXPECT_TRUE(pool.empty());
 }
-}  // namespace arachne
+}  // namespace morai

@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace arachne
+namespace morai
 {
 FibreQueue::FibreQueue(int32_t priority, uint32_t capacity)
   : _priority(priority)
@@ -113,4 +113,4 @@ void FibreQueue::clear()
   _buffer.clear();
   _buffer.resize(_buffer.capacity());
 }
-}  // namespace arachne
+}  // namespace morai

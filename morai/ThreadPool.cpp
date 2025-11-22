@@ -7,7 +7,7 @@
 
 #include <algorithm>
 
-namespace arachne
+namespace morai
 {
 namespace
 {
@@ -277,4 +277,4 @@ bool ThreadPool::updateNextFibre(uint32_t &selection_index)
   pushFibre(std::move(fibre));
   return true;
 }
-}  // namespace arachne
+}  // namespace morai
