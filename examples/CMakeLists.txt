@@ -7,4 +7,5 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cxxopts)
 
 add_subdirectory(fireworks)
+add_subdirectory(nbody)
 add_subdirectory(weaver)

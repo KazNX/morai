@@ -44,6 +44,7 @@ struct Frame
 /// - `co_await []() -> bool { ... };` - resume when the lambda returns true.
 /// - `co_await wait(condition, timeout_s);` - resume when condition() returns true or after
 ///   timeout_s seconds.
+/// - `co_await <Id>;` - resume after the fibre with the given @c Id has finished.
 /// - `co_return;` - end fibre execution.
 class Fibre
 {

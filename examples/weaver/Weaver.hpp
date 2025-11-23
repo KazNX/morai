@@ -85,6 +85,16 @@ inline Coord clamp(const Viewport &view, const Coord &coord)
                 .y = std::clamp(coord.y, view.origin.y, view.origin.y + view.size.height - 1) };
 }
 
+inline Coord wrap(const Viewport &view, Coord coord)
+{
+  coord.x = ((coord.x - view.origin.x) % view.size.width + view.size.width) % view.size.width +
+            view.origin.x;
+  coord.y = ((coord.y - view.origin.y) % view.size.height + view.size.height) % view.size.height +
+            view.origin.y;
+
+  return coord;
+}
+
 inline bool contains(const Viewport &view, const Coord &coord)
 {
   return coord.x >= view.origin.x && coord.x < view.origin.x + view.size.width &&
