@@ -214,10 +214,7 @@ morai::Fibre render_fibre(std::shared_ptr<GlobalState> state)
              static_cast<uint32_t>(state->render.body_positions[0].size());
     };
     state->render.ready_count = 0;
-
-    state->render.stamp++;
     state->render.swapBuffers();
-    co_yield {};
 
     // Clear screen
     state->render.screen.clear();
@@ -232,6 +229,7 @@ morai::Fibre render_fibre(std::shared_ptr<GlobalState> state)
                                                          static_cast<int>(pos.x / QUANTISATION),
                                                          static_cast<int>(pos.y / QUANTISATION),
                                                        });
+
       state->render.screen.layer(0).setCharacter(
         screen_pos, weaver::character('.', state->render.body_colours.at(i)));
     }
@@ -242,6 +240,7 @@ morai::Fibre render_fibre(std::shared_ptr<GlobalState> state)
     state->render.dt = state->render_scheduler.time().epoch_time_s - last_epoch_time;
     last_epoch_time = state->render_scheduler.time().epoch_time_s;
 
+    state->render.stamp++;
     co_await state->render.target_dt;
   }
 }

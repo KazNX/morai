@@ -217,7 +217,6 @@ void ThreadPool::createQueues(ThreadPoolParams &params)
   for (const int32_t priority : params.priority_levels)
   {
     _fibre_queues.emplace_back(std::make_unique<SharedQueue>(priority, params.initial_queue_size));
-    log::info(std::format("ThreadPool: Created queue {} {}", priority, params.initial_queue_size));
   }
 }
 

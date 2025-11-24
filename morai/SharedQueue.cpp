@@ -8,6 +8,7 @@ SharedQueue::SharedQueue(int32_t priority, uint32_t capacity)
 
 SharedQueue::~SharedQueue()
 {
+  // We have to pop all items in order to properly destroy them.
   clear();
 }
 
@@ -36,9 +37,12 @@ Fibre SharedQueue::pop()
 
 void SharedQueue::clear()
 {
-  while (!_queue.empty())
+  // We must explicitly destroy each handle since normally it's not wrapped in a Fibre which
+  // normally does this.
+  std::coroutine_handle<Fibre::promise_type> handle;
+  while (_queue.try_pop(handle))
   {
-    std::ignore = pop();
+    handle.destroy();
   }
 }
 }  // namespace morai

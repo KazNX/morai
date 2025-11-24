@@ -303,6 +303,7 @@ void Fibre::MoveAwaitable<Scheduler>::await_suspend(
 {
   if (move.target)
   {
+    // Setup the move operation.
     handle.promise().frame.move_operation = [move = this->move](Fibre &&fibre) {
       return move.target->move(std::move(fibre), move.priority);
     };

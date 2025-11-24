@@ -53,6 +53,23 @@ Fibre::~Fibre()
     return { .mode = ResumeMode::Sleep };
   }
 
+  // Check for move
+  if (_handle.promise().frame.move_operation)
+  {
+    auto move_op = std::exchange(_handle.promise().frame.move_operation, {});
+    // Note: the move operation will invalidate this object on success as it's content is moved
+    // away. On failure the content is moved back here.
+    *this = std::move(move_op(std::move(*this)));
+    if (!this->valid())
+    {
+      return { ResumeMode::Moved };
+    }
+    // Move failed. Target queue may be full. Return ownership to this object and try again next
+    // update.
+    std::swap(_handle.promise().frame.move_operation, move_op);
+    return { .mode = ResumeMode::Continue };
+  }
+
   // Resume will set promise.value again so long as we haven't expired.
   promise.frame.resumption = {};
   _handle.resume();
@@ -66,21 +83,6 @@ Fibre::~Fibre()
   {
     flagNotRunning();
     return { .mode = ResumeMode::Expire };
-  }
-
-  // Check for move
-  if (_handle.promise().frame.move_operation)
-  {
-    auto move_op = std::exchange(_handle.promise().frame.move_operation, {});
-    *this = std::move(move_op(std::move(*this)));
-    if (!this->valid())
-    {
-      return { ResumeMode::Moved };
-    }
-    // Move failed. Target queue may be full. Return ownership to this object and try again next
-    // update.
-    std::swap(_handle.promise().frame.move_operation, move_op);
-    return { .mode = ResumeMode::Continue };
   }
 
   // Add the epoch time to the resumption value to set the correct resume time.
