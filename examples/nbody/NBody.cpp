@@ -58,8 +58,8 @@ struct Render
   Render()
   {
     screen.addLayer(0, { { 0, 0 }, screen.size() });
-    colour_pairs[0] = screen.defineColour(weaver::Colour::Red, weaver::Colour::Black);
-    colour_pairs[1] = screen.defineColour(weaver::Colour::Magenta, weaver::Colour::Black);
+    colour_pairs[0] = screen.defineColour(weaver::Colour::Magenta, weaver::Colour::Black);
+    colour_pairs[1] = screen.defineColour(weaver::Colour::Red, weaver::Colour::Black);
     colour_pairs[2] = screen.defineColour(weaver::Colour::Yellow, weaver::Colour::Black);
     colour_pairs[3] = screen.defineColour(weaver::Colour::Green, weaver::Colour::Black);
     colour_pairs[4] = screen.defineColour(weaver::Colour::Blue, weaver::Colour::Black);
