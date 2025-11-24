@@ -337,7 +337,7 @@ int main(int argc, char *argv[])
   morai::ThreadPoolParams body_pool_params{ .worker_count = -1 };
   body_pool_params.initial_queue_size = options.body_count * 2;
   morai::SchedulerParams render_params{ .initial_queue_size = options.body_count * 2,
-                                        .priority_levels = { QP_Render, QP_Render,
+                                        .priority_levels = { QP_PreRender, QP_Render,
                                                              QP_PostRender } };
   std::shared_ptr<GlobalState> state =
     std::make_shared<GlobalState>(std::move(body_pool_params), std::move(render_params));

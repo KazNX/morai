@@ -172,8 +172,8 @@ SharedQueue &ThreadPool::selectQueue(int32_t priority, bool quiet)
   }
 
   SharedQueue &queue = *_fibre_queues.at(best_idx);
-  log::error(
-    std::format("Scheduler: Fibre priority mismatch: {} moved to {}", priority, queue.priority()));
+  log::error(std::format("Thread Pool: Fibre priority mismatch: {} moved to {}", priority,
+                         queue.priority()));
 
   return queue;
 }
