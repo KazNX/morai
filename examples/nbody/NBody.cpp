@@ -22,6 +22,13 @@
 
 namespace
 {
+enum QueuePriority
+{
+  QP_PreRender,
+  QP_Render,
+  QP_PostRender,
+};
+
 struct Vec2
 {
   double x{};
@@ -51,7 +58,7 @@ struct Render
   int32_t read_buffer_idx = 0;
   uint32_t ready_count = 0;
   double dt = 0.0f;
-  double target_dt = 0.01f;
+  double target_dt = 0.001f;
   /// Screen display.
   weaver::Screen screen;
 
@@ -175,7 +182,7 @@ morai::Fibre body_fibre(std::shared_ptr<GlobalState> state, Body body)
               state->render.body_masses, dt);
 
     // Render phase
-    co_await morai::moveTo(state->render_scheduler, 0);
+    co_await morai::moveTo(state->render_scheduler, QP_PreRender);
 
     // Update render position.
     // Wrap position to the screen bounds.
@@ -194,13 +201,13 @@ morai::Fibre body_fibre(std::shared_ptr<GlobalState> state, Body body)
 
     // Reschedule to after render update. That will give an the immediate dt from the current
     // update.
-    co_await morai::reschedule(2);
+    co_await morai::reschedule(QP_PostRender);
 
     // RenderUpdate dt based on the render delay.
     dt = state->render.dt;
 
     // Move back to the job pool
-    co_await morai::moveTo(state->nbody_pool, 0);
+    co_await morai::moveTo(state->nbody_pool, QP_PreRender);
   }
 }
 
@@ -277,9 +284,6 @@ void createBodies(const Options options, std::shared_ptr<GlobalState> state)
 
     state->nbody_pool.start(body_fibre(state, body));
   }
-
-  // Setup render scheduler to update at ~60Hz.
-  state->render_scheduler.start(render_fibre(state), 1, "Render");
 }
 
 int parseArgs(Options &options, int argc, char *argv[])
@@ -333,7 +337,8 @@ int main(int argc, char *argv[])
   morai::ThreadPoolParams body_pool_params{ .worker_count = -1 };
   body_pool_params.initial_queue_size = options.body_count * 2;
   morai::SchedulerParams render_params{ .initial_queue_size = options.body_count * 2,
-                                        .priority_levels = { 0, 1, 2 } };
+                                        .priority_levels = { QP_Render, QP_Render,
+                                                             QP_PostRender } };
   std::shared_ptr<GlobalState> state =
     std::make_shared<GlobalState>(std::move(body_pool_params), std::move(render_params));
 
@@ -343,6 +348,8 @@ int main(int argc, char *argv[])
   }
 
   createBodies(options, state);
+  // Setup render scheduler.
+  state->render_scheduler.start(render_fibre(state), QP_Render, "Render");
 
   const auto start_time = std::chrono::steady_clock::now();
   bool quit = false;
