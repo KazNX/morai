@@ -1,5 +1,6 @@
 #include "Log.hpp"
 
+#include <atomic>
 #include <algorithm>
 #include <array>
 #include <iostream>
