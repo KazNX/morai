@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include <type_traits>
+#include <optional>
 
 namespace morai
 {
@@ -17,14 +17,14 @@ class Fibre;
 /// Concept required to for supporting `co_await morai::moveTo()` operations. A fibre can be moved
 /// to any object that supports the function signature:
 ///
-/// - `Fibre move(Fibre &&fibre);`
+/// - `Fibre move(Fibre &&fibre, std::optional<int> priority);`
 ///
 /// There are some odd constraints here. The @c Fibre is moved to the target function. If the move
 /// operation can succeed, then the @c move() function should return an empty/invalid fibre:
 /// @c Fibre{} . On failure, the function should return the incoming fibre as shown below.
 ///
 /// @code
-/// Fibre move(Fibre &&fibre)
+/// Fibre move(Fibre &&fibre, std::optional<int> priority)
 /// {
 ///   SharedQueue &queue = /* get target SharedQueue */;
 ///   return queue.push(std::move(fibre));
@@ -37,7 +37,7 @@ class Fibre;
 /// Another example below, shows a move attempt that always fails:
 ///
 /// @code
-/// Fibre move(Fibre &&fibre)
+/// Fibre move(Fibre &&fibre, std::optional<int> priority)
 /// {
 ///   // Always move the fibre back out.
 ///   return std::move(fibre);
@@ -47,9 +47,10 @@ class Fibre;
 /// This odd ownership movement allows calling code to deal with potential deadlocks where the
 /// target @c SharedQueue is full.
 template <typename Scheduler>
-concept SchedulerType = requires(Scheduler &schduler, Fibre &&fibre) {
-  { schduler.move(std::move(fibre)) } -> std::same_as<Fibre>;
-};
+concept SchedulerType =
+  requires(Scheduler &scheduler, Fibre &&fibre, std::optional<int32_t> priority) {
+    { scheduler.move(std::move(fibre), priority) } -> std::same_as<Fibre>;
+  };
 
 struct Time
 {

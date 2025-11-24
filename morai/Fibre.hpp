@@ -2,6 +2,7 @@
 
 #include "Id.hpp"
 #include "Common.hpp"
+#include "Move.hpp"
 #include "Resumption.hpp"
 
 #include <atomic>
@@ -88,8 +89,8 @@ public:
     requires SchedulerType<Scheduler>
   struct MoveAwaitable
   {
-    Scheduler *target = nullptr;
-    bool await_ready() const noexcept { return target == nullptr; }
+    MoveTo<Scheduler> move{};
+    bool await_ready() const noexcept { return move.target == nullptr; }
     void await_suspend(std::coroutine_handle<Fibre::promise_type> handle) noexcept;
     void await_resume() noexcept {}
   };
@@ -170,9 +171,9 @@ public:
 
     template <typename Scheduler>
       requires SchedulerType<Scheduler>
-    MoveAwaitable<Scheduler> await_transform(Scheduler *move_to)
+    MoveAwaitable<Scheduler> await_transform(MoveTo<Scheduler> move_to)
     {
-      return { .target = move_to };
+      return { .move = move_to };
     }
   };
 
@@ -285,6 +286,7 @@ public:
   }
 
   std::coroutine_handle<promise_type> __release() { return std::exchange(_handle, {}); }
+  std::coroutine_handle<promise_type> __handle() { return _handle; }
 
 private:
   void flagNotRunning() noexcept { _handle.promise().frame.id.setRunning(false); }
@@ -299,12 +301,12 @@ template <typename Scheduler>
 void Fibre::MoveAwaitable<Scheduler>::await_suspend(
   std::coroutine_handle<Fibre::promise_type> handle) noexcept
 {
-  if (target)
+  if (move.target)
   {
-    handle.promise().frame.move_operation = [target = this->target](Fibre &&fibre) {
-      return target->move(std::move(fibre));
+    handle.promise().frame.move_operation = [move = this->move](Fibre &&fibre) {
+      return move.target->move(std::move(fibre), move.priority);
     };
-    target = nullptr;
+    move.target = nullptr;
   }
 }
 }  // namespace morai

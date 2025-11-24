@@ -3,6 +3,7 @@
 #include "Log.hpp"
 
 #include <algorithm>
+#include <coroutine>
 
 namespace morai
 {
@@ -80,9 +81,17 @@ void Scheduler::update(const double epoch_time_s)
   }
 }
 
-Fibre Scheduler::move(Fibre &&fibre)
+Fibre Scheduler::move(Fibre &&fibre, std::optional<int32_t> priority)
 {
-  return _move_queue.push(std::move(fibre));
+  // Grab the so that we only adjust the priority on success. The Fibre object will be invalid by
+  // then.
+  std::coroutine_handle<Fibre::promise_type> handle = fibre.__handle();
+  Fibre residual = _move_queue.push(std::move(fibre));
+  if (priority && !residual.valid())
+  {
+    handle.promise().frame.priority = *priority;
+  }
+  return residual;
 }
 
 Id Scheduler::enqueue(Fibre &&fibre)

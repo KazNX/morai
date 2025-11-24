@@ -135,11 +135,19 @@ bool ThreadPool::wait(std::optional<std::chrono::milliseconds> timeout)
   return empty();
 }
 
-Fibre ThreadPool::move(Fibre &&fibre)
+Fibre ThreadPool::move(Fibre &&fibre, std::optional<int32_t> priority)
 {
+  // Grab the so that we only adjust the priority on success. The Fibre object will be invalid by
+  // then.
+  std::coroutine_handle<Fibre::promise_type> handle = fibre.__handle();
   // Unlike scheduler, we can directly insert into the target queue as they are all threadsafe.
-  SharedQueue &queue = selectQueue(fibre.priority(), false);
-  return queue.push(std::move(fibre));
+  SharedQueue &queue = selectQueue(*priority, false);
+  Fibre residual = queue.push(std::move(fibre));
+  if (priority && !residual.valid())
+  {
+    handle.promise().frame.priority = *priority;
+  }
+  return residual;
 }
 
 SharedQueue &ThreadPool::selectQueue(int32_t priority, bool quiet)
@@ -209,6 +217,7 @@ void ThreadPool::createQueues(ThreadPoolParams &params)
   for (const int32_t priority : params.priority_levels)
   {
     _fibre_queues.emplace_back(std::make_unique<SharedQueue>(priority, params.initial_queue_size));
+    log::info(std::format("ThreadPool: Created queue {} {}", priority, params.initial_queue_size));
   }
 }
 

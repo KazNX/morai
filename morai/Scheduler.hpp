@@ -4,6 +4,7 @@
 #include "FibreQueue.hpp"
 #include "SharedQueue.hpp"
 
+#include <cstdint>
 #include <span>
 #include <string_view>
 
@@ -160,7 +161,7 @@ public:
   ///
   /// The fibre is added to a threadsafe queue which is drained during @c update(). Note that
   /// deadlocks may be possible as the threadsafe queue blocks when full.
-  Fibre move(Fibre &&fibre);
+  Fibre move(Fibre &&fibre, std::optional<int32_t> priority = std::nullopt);
 
 private:
   Id enqueue(Fibre &&fibre);

@@ -8,15 +8,23 @@ class Fibre;
 
 template <typename Scheduler>
   requires SchedulerType<Scheduler>
-Scheduler *moveTo(Scheduler &scheduler)
+struct MoveTo
 {
-  return &scheduler;
+  Scheduler *target = nullptr;
+  std::optional<int32_t> priority{};
+};
+
+template <typename Scheduler>
+  requires SchedulerType<Scheduler>
+MoveTo<Scheduler> moveTo(Scheduler &scheduler, std::optional<int32_t> priority = std::nullopt)
+{
+  return { .target = &scheduler, .priority = priority };
 }
 
 template <typename Scheduler>
   requires SchedulerType<Scheduler>
-Scheduler *moveTo(Scheduler *scheduler)
+MoveTo<Scheduler> moveTo(Scheduler *scheduler, std::optional<int32_t> priority = std::nullopt)
 {
-  return { .target = scheduler };
+  return { .target = scheduler, .priority = priority };
 }
 }  // namespace morai

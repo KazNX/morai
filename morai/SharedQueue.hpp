@@ -4,7 +4,6 @@
 
 #include "MPMCQueue.hpp"
 
-#include <atomic>
 #include <coroutine>
 
 namespace morai
