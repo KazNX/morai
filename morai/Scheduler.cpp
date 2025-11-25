@@ -67,6 +67,7 @@ void Scheduler::cancelAll()
   {
     queue.clear();
   }
+  _move_queue.clear();
 }
 
 void Scheduler::update(const double epoch_time_s)
