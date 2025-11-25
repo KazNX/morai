@@ -272,7 +272,23 @@ bool ThreadPool::updateNextFibre(uint32_t &selection_index)
     {
       // Propagate exception and expire.
       std::exception_ptr ex = fibre.exception();
-      // TODO: Log exception
+      try
+      {
+        if (ex)
+        {
+          std::rethrow_exception(ex);
+        }
+      }
+      catch (const std::exception &e)
+      {
+        log::error(std::format("Thread pool fibre {}:{} exception: {}", fibre.id().id(),
+                               fibre.name(), e.what()));
+      }
+      catch (...)
+      {
+        log::error(
+          std::format("Thread pool fibre {}:{} unknown exception.", fibre.id().id(), fibre.name()));
+      }
       return true;  // Unreachable.
     }
 

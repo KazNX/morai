@@ -7,31 +7,37 @@
 
 namespace morai
 {
+/// Rescheduling ordering preference.
 enum class PriorityPosition : int8_t
 {
-  Front,
-  Back
+  Front,  ///< Prefer inserting at the start of the new priority level.
+  Back    ///< Prefer inserting at the back of the new priority level.
 };
 
+/// Priority object, used for rescheduling.
 struct Priority
 {
-  int32_t priority = 0;
-  PriorityPosition position = PriorityPosition::Back;
+  int32_t priority = 0;                                ///< New priority level.
+  PriorityPosition position = PriorityPosition::Back;  ///< Ordering preference.
 };
 
 /// Return values for @c Fibre::resume(), indicating the new state of the fibre.
 enum class ResumeMode : std::int8_t
 {
-  Continue,   ///< Fibre continued running come code.
-  Sleep,      ///< Fibre is sleeping or waiting.
-  Moved,      ///< Moved to another scheduler.
-  Expire,     ///< Fibre has expired and requires cleanup.
-  Exception,  ///< An exception was raised. Expire the fibre after propagating.
+  Continue,   ///< Fibre continued running come code - push back into the queue, may need
+              ///< rescheduling.
+  Sleep,      ///< Fibre is sleeping or waiting - push back into the queue.
+  Moved,      ///< Moved to another scheduler - do nothing more in the current scheduler.
+  Expire,     ///< Fibre has expired and requires cleanup - do nothing more.
+  Exception,  ///< An exception was raised. Propagate or log the exception - do not reschedule.
 };
 
+/// Return value for @c Fibre::resume(), indicating what to do next with the fibre.
 struct Resume
 {
+  /// How to resume.
   ResumeMode mode = ResumeMode::Continue;
+  /// Rescheduling information for @c ResumeMode::Continue.
   std::optional<Priority> reschedule = {};
 };
 
