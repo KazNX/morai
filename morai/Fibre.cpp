@@ -53,7 +53,29 @@ Fibre::~Fibre()
     return { .mode = ResumeMode::Sleep };
   }
 
-  // Check for move
+  // Resume will set promise.frame.resumption again so long as we haven't expired.
+  // Only resume if we are not waiting on a move.
+  promise.frame.resumption = {};
+  if (!_handle.promise().frame.move_operation)
+  {
+    _handle.resume();
+    if (_handle.promise().frame.exception)
+    {
+      flagNotRunning();
+      return { .mode = ResumeMode::Exception };
+    }
+
+    if (_handle.done())
+    {
+      flagNotRunning();
+      return { .mode = ResumeMode::Expire };
+    }
+  }
+
+  // Check for move. This may may move a fibre immediately after it's last update - i.e.,
+  // immediately after the co_await moveTo() statement. On failure, the fibre will remain with the
+  // current scheduler. We must not update it, so the move_operation check around _handle.resume()
+  // prevents update from the wrong scheduler.
   if (_handle.promise().frame.move_operation)
   {
     auto move_op = std::exchange(_handle.promise().frame.move_operation, {});
@@ -68,21 +90,6 @@ Fibre::~Fibre()
     // update.
     std::swap(_handle.promise().frame.move_operation, move_op);
     return { .mode = ResumeMode::Continue };
-  }
-
-  // Resume will set promise.value again so long as we haven't expired.
-  promise.frame.resumption = {};
-  _handle.resume();
-  if (_handle.promise().frame.exception)
-  {
-    flagNotRunning();
-    return { .mode = ResumeMode::Exception };
-  }
-
-  if (_handle.done())
-  {
-    flagNotRunning();
-    return { .mode = ResumeMode::Expire };
   }
 
   // Add the epoch time to the resumption value to set the correct resume time.
