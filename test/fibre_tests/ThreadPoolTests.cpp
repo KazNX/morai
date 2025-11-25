@@ -131,5 +131,7 @@ TEST(ThreadPool, smallQueue)
   EXPECT_TRUE(pool.wait(std::chrono::seconds(5)));
   EXPECT_EQ(counter.load(std::memory_order_relaxed), task_count);
   EXPECT_TRUE(pool.empty());
+
+  unblocker_thread.join();
 }
 }  // namespace morai
