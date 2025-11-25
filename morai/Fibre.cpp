@@ -9,10 +9,16 @@ void Fibre::Awaitable::await_suspend(std::coroutine_handle<promise_type> handle)
 
 void Fibre::FibreIdAwaitable::await_suspend(std::coroutine_handle<promise_type> handle) noexcept
 {
-  handle.promise().frame.resumption = wait([id = id]() {
-    //
-    return !id.isRunning();
-  });
+  auto &promise = handle.promise();
+  if (promise.frame.id != id)
+  {
+    promise.frame.resumption = wait([id = id]() { return !id.isRunning(); });
+  }
+  else
+  {
+    // Self await. Set no condition, just a yield.
+    promise.frame.resumption = yield();
+  }
 }
 
 void Fibre::RescheduleAwaitable::await_suspend(std::coroutine_handle<promise_type> handle) noexcept
@@ -26,7 +32,7 @@ Fibre::~Fibre()
 {
   if (_handle)
   {
-    flagNotRunning();
+    // flagNotRunning();
     _handle.destroy();
   }
 }
@@ -37,7 +43,6 @@ Fibre::~Fibre()
   const Resumption &resumption = promise.frame.resumption;
   if (done())
   {
-    flagNotRunning();
     return { .mode = ResumeMode::Expire };
   }
 
@@ -61,13 +66,11 @@ Fibre::~Fibre()
     _handle.resume();
     if (_handle.promise().frame.exception)
     {
-      flagNotRunning();
       return { .mode = ResumeMode::Exception };
     }
 
     if (_handle.done())
     {
-      flagNotRunning();
       return { .mode = ResumeMode::Expire };
     }
   }

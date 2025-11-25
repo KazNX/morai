@@ -6,12 +6,34 @@
 
 namespace morai
 {
+/// Shared parameters for creating a @c Scheduler.
 struct SchedulerParams
 {
+  /// Initial fibre queue size. This may grow (double) as required.
   uint32_t initial_queue_size = 1024u;
+  /// Size of the threadsafe move queue used for @c moveTo() operations. This is a fixed size queue
+  /// and fails move operations once full.
   uint32_t move_queue_size = 1024u;
+  /// List of supported priority levels. One queue is created for each level at the
+  /// @c initial_queue_size. The levels are sorted (ascending) before creating queues, but duplicate
+  /// values yield undefined behaviour.
   std::vector<int32_t> priority_levels{};
 };
+
+/// Time structure used by @c Scheduler to track time.
+struct Time
+{
+  /// Total epoch time. This is user defined. See @c Scheduler::update().
+  double epoch_time_s = 0.0;
+  /// Delta time since the last update.
+  double dt = 0.0;
+};
+
+/// Function signature used for wait conditions - i.e., `co_await <condition>;` statements.
+/// See @c Fibre @c co_await handling.
+///
+/// @return True once the fibre may resume.
+using WaitCondition = std::function<bool()>;
 
 class Fibre;
 
@@ -53,14 +75,7 @@ concept SchedulerType =
     { scheduler.move(std::move(fibre), priority) } -> std::same_as<Fibre>;
   };
 
-struct Time
-{
-  double epoch_time_s = 0.0;
-  double dt = 0.0;
-};
-
-using WaitCondition = std::function<bool()>;
-
+/// Calculate the next power of two greater than or equal to the given @p value.
 constexpr uint8_t nextPowerOfTwo(uint8_t value)
 {
   if (value <= 1)
@@ -74,6 +89,7 @@ constexpr uint8_t nextPowerOfTwo(uint8_t value)
   return value + 1;
 }
 
+/// @overload
 constexpr uint16_t nextPowerOfTwo(uint16_t value)
 {
   if (value <= 1)
@@ -88,6 +104,7 @@ constexpr uint16_t nextPowerOfTwo(uint16_t value)
   return value + 1;
 }
 
+/// @overload
 constexpr uint32_t nextPowerOfTwo(uint32_t value)
 {
   if (value <= 1)
@@ -103,6 +120,7 @@ constexpr uint32_t nextPowerOfTwo(uint32_t value)
   return value + 1;
 }
 
+/// @overload
 constexpr uint64_t nextPowerOfTwo(uint64_t value)
 {
   if (value <= 1)

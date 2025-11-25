@@ -17,42 +17,61 @@ class Fibre;
 
 namespace detail
 {
+/// Internal fibre data - stored in the @c Fibre::promise_type.
 struct Frame
 {
   /// Indicates when next to resume the fibre - see @c Resumption. Note the time value is
   /// initially given as a relative time, but stored as an epoch time.
   Resumption resumption{};
+  /// Set to a new target priority when priority rescheduling is requested.
   std::optional<Priority> reschedule{};
   std::exception_ptr exception{};  ///< Exception storage.
+  /// Unique Id of this fibre.
   Id id{};
+  /// Current fibre priority.
   int32_t priority = 0;
+  /// Optional fibre name - debug info only.
   std::string name;
+  /// Set when a request to move to another scheduler is made. See @c moveTo(). Cleared after the
+  /// moved.
   std::function<Fibre(Fibre &&)> move_operation{};
-  bool cancel = true;
 };
 }  // namespace detail
 
 /// The @c Fibre implements a coroutine interface for the fibre system. It tracks the current fibre
 /// state and supports resuming.
 ///
+/// A valid @c Fibre function has the following requirements:
+///
+/// - Has a return type of @c morai::Fibre
+/// - Uses C++ coroutine features - @c co_await, @c co_yield and/or @c co_return.
+/// - Must periodically cede control via @c co_await or @c co_yield to avoid starving other fibres
+///   or the calling thread.
+///
 /// The fibre interface supports the following coroutine suspension mechanisms:
 ///
 /// - `co_yield {};` - resume next update.
-/// - `co_yield <double>;` - resume after the specified number of seconds.
-/// - `co_await sleep(duration_s);` - resume after duration_s seconds.
-/// - `co_await std::chrono::duration{x}` - resume after the specified duration.
-/// - `co_await wait(condition);` - resume when condition() returns true.
+/// - `co_yield yield();` - equivalent to `co_yield {};` - see @c yield().
+/// - `co_yield/co_await sleep(duration);` - sleep for the specified epoch duration
+///   - See @c sleep()
+/// - `co_yield/co_await wait(condition[, timeout_s]);` - resume once the condition returns true or
+///   after the @c timeout_s has elpased the optional timeout expires
+///   - See @c wait()
+/// - `co_await <double>;` - resume after the specified number of seconds of epoch time.
+/// - `co_await std::chrono::duration{x}` - resume after the specified duration of epoch time.
+/// - `co_await WaitCondition{};` - resume when the @c WaitCondition function returns true.
 /// - `co_await []() -> bool { ... };` - resume when the lambda returns true.
-/// - `co_await wait(condition, timeout_s);` - resume when condition() returns true or after
-///   timeout_s seconds.
-/// - `co_await <Id>;` - resume after the fibre with the given @c Id has finished.
+/// - `co_await reschedule(priority[, position]);` - reschedule the fibre at the given priority.
+///  - See @c reschedule()
+/// - `co_await <Id>;` - resume after the fibre with the given @c Id is no longer running.
 /// - `co_return;` - end fibre execution.
 class Fibre
 {
 public:
   struct promise_type;
 
-  /// Implements the awaitable interface for fibre coroutines.
+  /// Implements the awaitable interface for @c Resumption types - i.e., general @c co_await
+  /// handling.
   struct Awaitable
   {
     /// Transient storage for resumption condition. Propagated to the promise on suspension.
@@ -65,6 +84,7 @@ public:
     void await_resume() noexcept {}
   };
 
+  /// Implements the awaitable interface for @c Id types - i.e., @c co_await another fibre.
   struct FibreIdAwaitable
   {
     /// Transient storage for resumption condition. Propagated to the promise on suspension.
@@ -77,14 +97,18 @@ public:
     void await_resume() noexcept {}
   };
 
+  /// Implements the awaitable interface for @c Priority rescheduling - i.e., @c co_await
+  /// @c reschedule().
   struct RescheduleAwaitable
   {
+    /// New priority value storage.
     Priority value;
     bool await_ready() const noexcept { return false; }
     void await_suspend(std::coroutine_handle<promise_type> handle) noexcept;
     void await_resume() noexcept {}
   };
 
+  /// Implements the awaitable interface for @c MoveTo - i.e., @c co_await @c moveTo().
   template <typename Scheduler>
     requires SchedulerType<Scheduler>
   struct MoveAwaitable
@@ -99,6 +123,9 @@ public:
   struct promise_type
   {
     detail::Frame frame{};
+
+    /// Destructor - marks the @c Fibre @c Id as no longer running.
+    ~promise_type() { frame.id.setRunning(false); }
 
     /// Convert to the owning @c Fibre object.
     Fibre get_return_object() noexcept
@@ -155,11 +182,7 @@ public:
     }
 
     /// @c co_await a fibre @c Id. Waits until the @c Id is flagged as not running.
-    FibreIdAwaitable await_transform(const Id &id)
-    {
-      //
-      return { .id = id };
-    }
+    FibreIdAwaitable await_transform(const Id &id) { return { .id = id }; }
 
     /// @c co_await handling for @c Priority rescheduling.
     /// Waits for the fibre to be assigned a new priority. Essentially this resumes on the next
@@ -177,29 +200,37 @@ public:
     }
   };
 
+  /// Create an empty, invalid fibre.
   Fibre() = default;
+  /// Create a fiber around the given coroutine @p handle and @p Id.
   Fibre(std::coroutine_handle<promise_type> handle, Id id)
     : _handle{ handle }
   {
     auto &promise = _handle.promise();
     id.setRunning(true);
     promise.frame.id = std::move(id);
-    promise.frame.cancel = false;
   }
+  /// Create a fibre around the given coroutine @p handle - preserves the current @c Id. This should
+  /// only be called for fibres after a @c __release().
   Fibre(std::coroutine_handle<promise_type> handle)
     : _handle{ handle }
   {}
-  Fibre(const Fibre &) = delete;
+
   Fibre(Fibre &&other) noexcept
     : _handle{ std::exchange(other._handle, {}) }
   {}
-  Fibre &operator=(const Fibre &) = delete;
+
+  /// Move assignment - self move is supported.
   Fibre &operator=(Fibre &&other) noexcept
   {
     swap(other);
     return *this;
   }
 
+  Fibre(const Fibre &) = delete;
+  Fibre &operator=(const Fibre &) = delete;
+
+  /// Destructor - cleans up the coroutine.
   ~Fibre();
 
   [[nodiscard]] Id id() const { return { (_handle) ? _handle.promise().frame.id : Id{} }; }
@@ -208,22 +239,17 @@ public:
   {
     return (_handle) ? _handle.promise().frame.name : std::string_view{};
   }
+  /// Set the fiber (debug) name.
   void setName(std::string_view name) { _handle.promise().frame.name = name; }
 
-  [[nodiscard]] bool cancel() const { return (_handle) ? _handle.promise().frame.cancel : true; }
-  void markForCancellation()
-  {
-    if (_handle)
-    {
-      _handle.promise().frame.cancel = true;
-    }
-  }
-
+  /// Get the fibre scheduling priority.
   [[nodiscard]] int32_t priority() const
   {
     return (_handle) ? _handle.promise().frame.priority : 0;
   }
 
+  /// Sets the fibre scheduling priority. For internal use only. Use @c Scheduler::start() and
+  /// `co_await reschedule();` to set user priority levels.
   void __setPriority(int32_t p)
   {
     if (_handle)
@@ -239,10 +265,7 @@ public:
   }
 
   /// Check if the fibre has completed execution.
-  [[nodiscard]] bool done() const noexcept
-  {
-    return !_handle || _handle.done() || _handle.promise().frame.cancel;
-  }
+  [[nodiscard]] bool done() const noexcept { return !_handle || _handle.done(); }
 
   /// Attempt to resume fibre execution.
   ///
@@ -266,13 +289,16 @@ public:
   /// @c Fibre.
   [[nodiscard]] Resume resume(const double epoch_time_s) noexcept;
 
+  /// Get any exception raised during fibre execution.
   std::exception_ptr exception() const noexcept
   {
     return _handle ? _handle.promise().frame.exception : nullptr;
   }
 
+  /// Swap contents of this fiber with another - self swap supported.
   void swap(Fibre &other) noexcept { std::swap(_handle, other._handle); }
 
+  /// Generate the next unique fibre Id value.
   [[nodiscard]] static IdValueType nextId()
   {
     // We increment by 2 to avoid the running bit.
@@ -285,12 +311,13 @@ public:
     return id;
   }
 
+  /// Release ownership of the internal coroutine handle. The caller is then responsible for
+  /// calling @c handle.destroy() . For internal use only.
   std::coroutine_handle<promise_type> __release() { return std::exchange(_handle, {}); }
+  /// Get the internal coroutine handle. For internal use only.
   std::coroutine_handle<promise_type> __handle() { return _handle; }
 
 private:
-  void flagNotRunning() noexcept { _handle.promise().frame.id.setRunning(false); }
-
   std::coroutine_handle<promise_type> _handle;
   static std::atomic<IdValueType> _next_id;
 };
@@ -315,6 +342,7 @@ void Fibre::MoveAwaitable<Scheduler>::await_suspend(
 
 namespace std
 {
+/// Specialisation of @c std::less for @c morai::Fibre to allow use in ordered containers.
 template <>
 struct less<morai::Fibre>
 {
@@ -324,6 +352,7 @@ struct less<morai::Fibre>
   }
 };
 
+/// Specialisation of @c std::swap for @c morai::Fibre.
 template <>
 inline void swap(morai::Fibre &a, morai::Fibre &b) noexcept
 {

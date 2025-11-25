@@ -147,11 +147,9 @@ void Scheduler::updateQueue(const double epoch_time_s, FibreQueue &queue)
     pumpMoveQueue();
 
     Fibre fibre = queue.pop();
-    // Check for resumption
-    if (fibre.cancel())
+
+    if (!fibre.valid())
     {
-      // Popped a cancelled fibre. Nothing to do.
-      ++expired_count;
       continue;
     }
 

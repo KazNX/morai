@@ -21,7 +21,7 @@ Fibre SharedQueue::push(Fibre &&fibre)
   {
     return {};
   }
-  return { handle, id };
+  return { handle };
 }
 
 Fibre SharedQueue::pop()
@@ -30,7 +30,7 @@ Fibre SharedQueue::pop()
   _queue.try_pop(handle);
   if (handle)
   {
-    return { handle, handle.promise().frame.id };
+    return { handle };
   }
   return {};
 }
