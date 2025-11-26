@@ -40,39 +40,44 @@ class Fibre;
 /// Concept required to for supporting `co_await morai::moveTo()` operations. A fibre can be moved
 /// to any object that supports the function signature:
 ///
-/// - `Fibre move(Fibre &&fibre, std::optional<int> priority);`
+/// - `bool move(Fibre &fibre, std::optional<int> priority);`
 ///
-/// There are some odd constraints here. The @c Fibre is moved to the target function. If the move
-/// operation can succeed, then the @c move() function should return an empty/invalid fibre:
-/// @c Fibre{} . On failure, the function should return the incoming fibre as shown below.
+/// Implementations of hte @c move() have the following responsibilities:
+///
+
+/// 1. On success, invalidate the @p fibre argument by calling @c fibre.__release()
+/// 2. On success, set the fibre priority, typically by directly modifying
+///   @c Fibre::promise_type::frame::priority
+/// 3. On failure, leave the @p fibre in a valid state - do not @c __release().
+/// 4. Return true on success, false on failure.
 ///
 /// @code
-/// Fibre move(Fibre &&fibre, std::optional<int> priority)
+/// bool move(Fibre &&fibre, std::optional<int> priority)
 /// {
+///   // Capture the fibre handle. This allows the fibre argument to be invalidated while keeping
+///   // a reference to the frame.
+///   std::coroutine_handle<Fibre::promise_type> handle = fibre.__handle();
 ///   SharedQueue &queue = /* get target SharedQueue */;
-///   return queue.push(std::move(fibre));
+///   // 1. Try pushing into the target queue (threadsafe).
+///   // The SharedQueue performs the fibre.__release() on success.
+///   const bool pushed = queue.tryPush(fibre);
+///   if (pushed && priority)
+///   {
+///     // 2. Adjust priority on success, if necessary.
+///     handle.promise().frame.priority = *priority;
+///   }
+///
+///   // 3/4. Return success/failure.
+///   return pushed;
 /// }
 /// @endcode
 ///
-/// On success, the fibre is essentially moved to the target queue. On failure the fibre is
-/// temporarily move to the queue, then returned by the queue and moved out of the function.
-///
-/// Another example below, shows a move attempt that always fails:
-///
-/// @code
-/// Fibre move(Fibre &&fibre, std::optional<int> priority)
-/// {
-///   // Always move the fibre back out.
-///   return std::move(fibre);
-/// }
-/// @endcode
-///
-/// This odd ownership movement allows calling code to deal with potential deadlocks where the
+/// The potential to fail moving fibres allows the system to avoid potential deadlocks when the
 /// target @c SharedQueue is full.
 template <typename Scheduler>
 concept SchedulerType =
-  requires(Scheduler &scheduler, Fibre &&fibre, std::optional<int32_t> priority) {
-    { scheduler.move(std::move(fibre), priority) } -> std::same_as<Fibre>;
+  requires(Scheduler &scheduler, Fibre &fibre, std::optional<int32_t> priority) {
+    { scheduler.move(fibre, priority) } -> std::same_as<bool>;
   };
 
 /// Calculate the next power of two greater than or equal to the given @p value.

@@ -34,13 +34,16 @@ public:
   /// Check if the queue is empty. This may be inaccurate as other threads may modify the queue.
   [[nodiscard]] bool empty() const { return _queue.empty(); }
 
-  /// Try push into the shared queue. This may fail when full in which case the return value must
-  /// be captured. This can be used to address potential deadlock issues.
+  /// Try push into the shared queue. This may fail when full.
   ///
-  /// @param fibre The fibre to move to the queue.
-  /// @return An invalid fibre - @c Fibre::valid() is false - on success, or the same fibre back
-  /// on failure (queue full).
-  [[nodiscard]] Fibre push(Fibre &&fibre);
+  /// On success the @p fibre coroutine handle is moved out of the @p fibre object into the queue.
+  /// On failure the @p fibre argument remains valid and the caller must take handle it
+  /// appropriately.
+  ///
+  /// @param fibre The fibre to push into to the queue.
+  /// @return True on success, in which case @p fibre becomes invalid. The fibre remains valid on
+  /// failure and the caller must handle it appropriately.
+  [[nodiscard]] bool tryPush(Fibre &fibre);
 
   /// Pop the next item off the queue.
   [[nodiscard]] Fibre pop();

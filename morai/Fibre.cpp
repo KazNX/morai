@@ -61,10 +61,10 @@ Fibre::~Fibre()
   // Resume will set promise.frame.resumption again so long as we haven't expired.
   // Only resume if we are not waiting on a move.
   promise.frame.resumption = {};
-  if (!_handle.promise().frame.move_operation)
+  if (!promise.frame.move_operation)
   {
     _handle.resume();
-    if (_handle.promise().frame.exception)
+    if (promise.frame.exception)
     {
       return { .mode = ResumeMode::Exception };
     }
@@ -79,19 +79,18 @@ Fibre::~Fibre()
   // immediately after the co_await moveTo() statement. On failure, the fibre will remain with the
   // current scheduler. We must not update it, so the move_operation check around _handle.resume()
   // prevents update from the wrong scheduler.
-  if (_handle.promise().frame.move_operation)
+  if (promise.frame.move_operation)
   {
-    auto move_op = std::exchange(_handle.promise().frame.move_operation, {});
+    auto move_op = std::exchange(promise.frame.move_operation, {});
     // Note: the move operation will invalidate this object on success as it's content is moved
     // away. On failure the content is moved back here.
-    *this = std::move(move_op(std::move(*this)));
-    if (!this->valid())
+    if (move_op(*this))
     {
       return { ResumeMode::Moved };
     }
     // Move failed. Target queue may be full. Return ownership to this object and try again next
     // update.
-    std::swap(_handle.promise().frame.move_operation, move_op);
+    std::swap(promise.frame.move_operation, move_op);
     return { .mode = ResumeMode::Continue };
   }
 

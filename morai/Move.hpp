@@ -25,7 +25,8 @@ struct MoveTo
 /// @return A @c MoveTo object used to invoke the correct @c Fibre::promise_type::await_transform().
 template <typename Scheduler>
   requires SchedulerType<Scheduler>
-MoveTo<Scheduler> moveTo(Scheduler &scheduler, std::optional<int32_t> priority = std::nullopt)
+[[nodiscard]] MoveTo<Scheduler> moveTo(Scheduler &scheduler,
+                                       std::optional<int32_t> priority = std::nullopt)
 {
   return { .target = &scheduler, .priority = priority };
 }
@@ -33,7 +34,8 @@ MoveTo<Scheduler> moveTo(Scheduler &scheduler, std::optional<int32_t> priority =
 /// @overload
 template <typename Scheduler>
   requires SchedulerType<Scheduler>
-MoveTo<Scheduler> moveTo(Scheduler *scheduler, std::optional<int32_t> priority = std::nullopt)
+[[nodiscard]] MoveTo<Scheduler> moveTo(Scheduler *scheduler,
+                                       std::optional<int32_t> priority = std::nullopt)
 {
   return { .target = scheduler, .priority = priority };
 }

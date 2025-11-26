@@ -82,17 +82,17 @@ void Scheduler::update(const double epoch_time_s)
   }
 }
 
-Fibre Scheduler::move(Fibre &&fibre, std::optional<int32_t> priority)
+bool Scheduler::move(Fibre &fibre, std::optional<int32_t> priority)
 {
   // Grab the so that we only adjust the priority on success. The Fibre object will be invalid by
   // then.
   std::coroutine_handle<Fibre::promise_type> handle = fibre.__handle();
-  Fibre residual = _move_queue.push(std::move(fibre));
-  if (priority && !residual.valid())
+  const bool pushed = _move_queue.tryPush(fibre);
+  if (pushed && priority)
   {
     handle.promise().frame.priority = *priority;
   }
-  return residual;
+  return pushed;
 }
 
 Id Scheduler::enqueue(Fibre &&fibre)

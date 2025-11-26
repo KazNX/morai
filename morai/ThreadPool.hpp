@@ -115,15 +115,22 @@ public:
   /// @return True of the queues are empty (unreliable).
   bool wait(std::optional<std::chrono::milliseconds> timeout = std::nullopt);
 
-  /// Move a fibre into the task pool (threadsafe). This implements the scheduler move operations.
+  /// Move a fibre into the task pool (theadsafe). This implements the scheduler move operations.
   ///
-  /// The fibre is added to a threadsafe queue which is drained during @c update(). Note that
-  /// deadlocks may be possible as the threadsafe queue blocks when full.
-  Fibre move(Fibre &&fibre, std::optional<int32_t> priority = std::nullopt);
+  /// On success the @p fibre coroutine handle is moved out of the @p fibre object into a new
+  /// @c Fibre object, invalidating the @p fibre argument. On failure @p fibre remains valid.
+  /// Success is indicated by the return value.
+  ///
+  /// Fibres are immediately inserted into the priority queue most closely matching the fibre
+  /// priority (lower bound).
+  ///
+  /// @param fibre A reference to the fibre to move.
+  /// @return True on success, in which case the @p fibre argument becomes invalid.
+  bool move(Fibre &fibre, std::optional<int32_t> priority = std::nullopt);
 
 private:
   SharedQueue &selectQueue(int32_t priority, bool quiet);
-  [[nodiscard]] Fibre pushFibre(Fibre &&fibre);
+  [[nodiscard]] bool tryPushFibre(Fibre &fibre);
   [[nodiscard]] Fibre nextPriorityFibre();
   [[nodiscard]] Fibre nextFibre(uint32_t &selection_index);
 

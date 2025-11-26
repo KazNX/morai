@@ -81,14 +81,10 @@ Id ThreadPool::start(Fibre &&fibre, int32_t priority, std::string_view name)
   fibre.__setPriority(priority);
   fibre.setName(name);
   SharedQueue &fibres = selectQueue(priority, false);
-  while (fibre.valid())
+  while (!fibres.tryPush(fibre))
   {
-    fibre = std::move(fibres.push(std::move(fibre)));
-    if (fibre.valid())
-    {
-      // Full. Sleep and try again.
-      std::this_thread::sleep_for(_idle_sleep_duration);
-    }
+    // Full. Sleep and try again.
+    std::this_thread::sleep_for(_idle_sleep_duration);
   }
   return fibre_id;
 }
@@ -135,19 +131,19 @@ bool ThreadPool::wait(std::optional<std::chrono::milliseconds> timeout)
   return empty();
 }
 
-Fibre ThreadPool::move(Fibre &&fibre, std::optional<int32_t> priority)
+bool ThreadPool::move(Fibre &fibre, std::optional<int32_t> priority)
 {
   // Grab the so that we only adjust the priority on success. The Fibre object will be invalid by
   // then.
   std::coroutine_handle<Fibre::promise_type> handle = fibre.__handle();
   // Unlike scheduler, we can directly insert into the target queue as they are all threadsafe.
   SharedQueue &queue = selectQueue(*priority, false);
-  Fibre residual = queue.push(std::move(fibre));
-  if (priority && !residual.valid())
+  const bool pushed = queue.tryPush(fibre);
+  if (pushed && priority)
   {
     handle.promise().frame.priority = *priority;
   }
-  return residual;
+  return pushed;
 }
 
 SharedQueue &ThreadPool::selectQueue(int32_t priority, bool quiet)
@@ -178,10 +174,10 @@ SharedQueue &ThreadPool::selectQueue(int32_t priority, bool quiet)
   return queue;
 }
 
-Fibre ThreadPool::pushFibre(Fibre &&fibre)
+bool ThreadPool::tryPushFibre(Fibre &fibre)
 {
   SharedQueue &queue = selectQueue(fibre.priority(), true);
-  return queue.push(std::move(fibre));
+  return queue.tryPush(fibre);
 }
 
 Fibre ThreadPool::nextFibre(uint32_t &selection_index)
@@ -307,8 +303,7 @@ bool ThreadPool::updateNextFibre(uint32_t &selection_index)
     // Try requeue the fibre. This may fail if the queue is full. In this case we'll update the
     // fibre again, hoping the queues will free up. While this avoids a total deadlock, it can still
     // result in fibre starvation.
-    fibre = std::move(pushFibre(std::move(fibre)));
-    if (!fibre.valid())
+    if (tryPushFibre(fibre))
     {
       return true;
     }

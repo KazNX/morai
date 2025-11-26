@@ -34,7 +34,7 @@ struct Frame
   std::string name;
   /// Set when a request to move to another scheduler is made. See @c moveTo(). Cleared after the
   /// moved.
-  std::function<Fibre(Fibre &&)> move_operation{};
+  std::function<bool(Fibre &)> move_operation{};
 };
 }  // namespace detail
 
@@ -331,8 +331,8 @@ void Fibre::MoveAwaitable<Scheduler>::await_suspend(
   if (move.target)
   {
     // Setup the move operation.
-    handle.promise().frame.move_operation = [move = this->move](Fibre &&fibre) {
-      return move.target->move(std::move(fibre), move.priority);
+    handle.promise().frame.move_operation = [move = this->move](Fibre &fibre) -> bool {
+      return move.target->move(fibre, move.priority);
     };
     move.target = nullptr;
   }

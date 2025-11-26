@@ -159,9 +159,17 @@ public:
 
   /// Move a fibre into this scheduler (threadsafe). This implements the scheduler move operations.
   ///
-  /// The fibre is added to a threadsafe queue which is drained during @c update(). Note that
-  /// deadlocks may be possible as the threadsafe queue blocks when full.
-  Fibre move(Fibre &&fibre, std::optional<int32_t> priority = std::nullopt);
+  /// On success the @p fibre coroutine handle is moved out of the @p fibre object into a new
+  /// @c Fibre object, invalidating the @p fibre argument. On failure @p fibre remains valid.
+  /// Success is indicated by the return value.
+  ///
+  /// The fibre is added to a threadsafe queue which is drained during @c update(). This places the
+  /// fibre into the most appropriate priority queue (lower bound). Note that deadlocks may be
+  /// possible as the threadsafe queue blocks when full.
+  ///
+  /// @param fibre A reference to the fibre to move.
+  /// @return True on success, in which case the @p fibre argument becomes invalid.
+  bool move(Fibre &fibre, std::optional<int32_t> priority = std::nullopt);
 
 private:
   Id enqueue(Fibre &&fibre);

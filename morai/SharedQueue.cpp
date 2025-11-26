@@ -12,16 +12,17 @@ SharedQueue::~SharedQueue()
   clear();
 }
 
-Fibre SharedQueue::push(Fibre &&fibre)
+bool SharedQueue::tryPush(Fibre &fibre)
 {
-  auto handle = fibre.__release();
+  auto handle = fibre.__handle();
   // Must copy the idea to avoid self move.
   Id id = handle.promise().frame.id;
   if (_queue.try_emplace(handle))
   {
-    return {};
+    fibre.__release();
+    return true;
   }
-  return { handle };
+  return false;
 }
 
 Fibre SharedQueue::pop()
