@@ -92,7 +92,7 @@ public:
     /// Transient storage for resumption condition. Propagated to the promise on suspension.
     Id id;
     /// Check if the fibre can immediately continue (true) or fibre needs to suspend (false).
-    bool await_ready() const { return !id.isRunning(); }
+    bool await_ready() const { return !id.running(); }
     /// Suspend the fibre, migrating the @c resumption condition to the promise.
     void await_suspend(std::coroutine_handle<promise_type> handle) noexcept;
     /// Resumption handling - no-op.
@@ -303,12 +303,10 @@ public:
   /// Generate the next unique fibre Id value.
   [[nodiscard]] static IdValueType nextId()
   {
-    // We increment by 2 to avoid the running bit.
-    constexpr uint64_t increment = 2;
-    IdValueType id = (_next_id += increment);
-    if ((id | Id::RunningBit) == InvalidFibreValue) [[unlikely]]
+    IdValueType id = (_next_id += Id::Increment);
+    if ((id | Id::SpecialBits) == InvalidFibreValue) [[unlikely]]
     {
-      id = (_next_id += increment);
+      id = (_next_id += Id::Increment);
     }
     return id;
   }

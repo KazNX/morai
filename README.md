@@ -80,12 +80,12 @@ cmake --build build --config Release -j
       - Could be on same thread, but works across threads
   - [x] Improve awaiting fibres
     - [x] Change Id to a kind of shared pointer to the Id number
-    - [x] `isRunning()` check becomes an `Id` operation.
+    - [x] `running()` check becomes an `Id` operation.
     - [x] Use 1 bit to flag completion
     - [x] Change await statement to await the `Id` object.
     - [x] ~~Support awaiting multiple fibres~~
   - [x] Logging interface
 - Consider
 - [ ] `Clock` object given to a scheduler on construction to allow an alternative clock
-  - [ ] Allow `ThreadPool` to use a custom clock. 
-- [ ] `ThreadPool` cancellation list to support `ThreadPool::cancel()`.
+  - [ ] Allow `ThreadPool` to use a custom clock.
+- [x] `ThreadPool` cancellation list to support ~~`ThreadPool::cancel()`~~ cancellation via `Id::markForCancellation()`.

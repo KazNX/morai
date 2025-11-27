@@ -81,7 +81,7 @@ public:
   /// @param fibre The fibre entry point.
   /// @param priority Scheduling priority.
   /// @param name Optional name.
-  /// @return The fibre @c Id. Maybe used for cancellation or @c await().
+  /// @return The fibre @c Id. Maybe used for cancellation or @c co_await.
   Id start(Fibre &&fibre, int32_t priority = 0, std::string_view name = {});
   /// @overload
   Id start(Fibre &&fibre, std::string_view name)

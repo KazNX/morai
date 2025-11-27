@@ -250,16 +250,22 @@ The following `co_await` patterns are supported:
   - Resume after moving this fibre to a new `scheduler`, optionally at a new `priority`.
   - See [moving fibres](#moving-fibres-between-schedulers)
 
+## Cancelling fibres
+
+A fibre may be cancelled via its scheduler if managed by a `Scheduler` object (not `ThreadPool`) or via the `Id` calling
+`Id::markForCancellation()`. The former immediately cancels the former,  provided the `Scheduler` is managing the fibre,
+while the latter sees the fibre terminates the next time it would resume (without resuming).
+
 ## Awaiting other fibres
 
 A `Fibre` can suspend until another `Fibre` completes using by using `co_await` with the second
 fibre's `Id` object. This `Id` is returned when the fibre is added to a scheduler - e.g.,
 `Scheduler::start()` or `ThreadPool::start()` - and remains unique to that fibre. The `Id` object
 is a lightweight wrapper around a shared ID value. The `Id` object can be used to see if a fibre
-is still running - `Id::isRunning()`. This value is true as soon as the `Fibre` is created and
+is still running - `Id::running()`. This value is true as soon as the `Fibre` is created and
 becomes false after the `Fibre` is cleaned up.
 
-The `co_wait <Id>;` statement essentially creates a wait condition on `!Id::isRunning()`.
+The `co_wait <Id>;` statement essentially creates a wait condition on `!Id::running()`.
 
 Be wary of having fibres wait on other fibres as it is very easy to create circular dependencies
 and deadlock all the waiting fibres. A fibre waiting on itself will also deadlock.

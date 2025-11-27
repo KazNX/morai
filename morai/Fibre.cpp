@@ -12,7 +12,7 @@ void Fibre::FibreIdAwaitable::await_suspend(std::coroutine_handle<promise_type> 
   auto &promise = handle.promise();
   if (promise.frame.id != id)
   {
-    promise.frame.resumption = wait([id = id]() { return !id.isRunning(); });
+    promise.frame.resumption = wait([id = id]() { return !id.running(); });
   }
   else
   {
@@ -41,7 +41,7 @@ Fibre::~Fibre()
 {
   auto &promise = _handle.promise();
   const Resumption &resumption = promise.frame.resumption;
-  if (done())
+  if (done() || promise.frame.id.cancelled())
   {
     return { .mode = ResumeMode::Expire };
   }

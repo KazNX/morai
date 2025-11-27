@@ -15,11 +15,18 @@ constexpr auto InvalidFibreValue = ~static_cast<IdValueType>(0);
 ///
 /// The @c ID does not represent a valid fibre if it's value is @c InvalidFibreValue - see
 /// @c valid(). The @c Id can also be used to check if the fibre is still alive or has been
-/// cleaned up and is no longer running - see @c isRunning().
+/// cleaned up and is no longer running - see @c running().
 class Id
 {
 public:
+  /// Marks the @c Id as belonging to a running fibre.
   static constexpr uint64_t RunningBit = 1u;
+  /// Marks the @c Id  to request cancellation of the owning fibre.
+  static constexpr uint64_t CancellationBit = 2u;
+  /// Collation of bits used to flag special states.
+  static constexpr uint64_t SpecialBits = RunningBit | CancellationBit;
+  /// @c Id value generation increment to avoid special bits.
+  static constexpr uint64_t Increment = 4u;
 
   Id() = default;
   /// Construct an @c Id with the given value and set its running state.
@@ -49,21 +56,33 @@ public:
   [[nodiscard]] bool valid() const noexcept { return ptr_ && *ptr_ != InvalidFibreValue; }
 
   /// Returns true if the fibre associated with this @c Id is marked as running.
-  [[nodiscard]] bool isRunning() const noexcept { return valid() && (*ptr_ & RunningBit); }
+  [[nodiscard]] bool running() const noexcept { return valid() && (*ptr_ & RunningBit); }
+
+  [[nodiscard]] bool cancelled() const noexcept
+  {
+    return valid() && ((*ptr_ & CancellationBit) != 0);
+  }
+
+  /// Mark the fibre associated with this @c Id for cancellation. Once set this bit should not be
+  /// cleared. The fibre is cancelled the next time it is asked to resume.
+  void markForCancellation() noexcept { setBit(CancellationBit, true); }
 
 private:
   /// Set the running state of this @c Id.
-  void setRunning(bool is_running) noexcept
+  void setRunning(const bool running) noexcept { setBit(RunningBit, running); }
+
+  /// Helper function for setting one of the special bits.
+  void setBit(const uint64_t bit, bool on) noexcept
   {
     if (valid())
     {
-      if (is_running)
+      if (on)
       {
-        *ptr_ |= RunningBit;
+        *ptr_ |= (bit & SpecialBits);
       }
       else
       {
-        *ptr_ &= ~RunningBit;
+        *ptr_ &= ~(bit & SpecialBits);
       }
     }
   }

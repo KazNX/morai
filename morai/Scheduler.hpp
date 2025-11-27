@@ -140,6 +140,10 @@ public:
   }
 
   /// Cancel a running fibre by @c Id.
+  ///
+  /// Unlike @c Id::markForCancellation(), this function immediately cancels the fibre, but only if
+  /// it is managed by this scheduler.
+  ///
   /// @param fibre_id @c Id of the fibre to cancel.
   /// @return True if a fibre matching the @p fibre_id was found an cancelled.
   bool cancel(Id fibre_id);
