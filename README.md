@@ -60,7 +60,7 @@ cmake --build build --config Release -j
 
 ## TODO
 
-- [ ] Usage examples
+- [x] Usage examples
 - [x] Features to consider
   - [x] Scheduling priority
     - [x] Set on create
@@ -85,3 +85,7 @@ cmake --build build --config Release -j
     - [x] Change await statement to await the `Id` object.
     - [x] ~~Support awaiting multiple fibres~~
   - [x] Logging interface
+- Consider
+- [ ] `Clock` object given to a scheduler on construction to allow an alternative clock
+  - [ ] Allow `ThreadPool` to use a custom clock. 
+- [ ] `ThreadPool` cancellation list to support `ThreadPool::cancel()`.

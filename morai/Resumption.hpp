@@ -102,6 +102,12 @@ inline Resumption sleep(const double duration_s)
   return Resumption{ .time_s = duration_s };
 }
 
+/// @overload
+inline Resumption sleep(const float duration_s)
+{
+  return Resumption{ .time_s = static_cast<double>(duration_s) };
+}
+
 /// A helper function for specifying a sleep duration using a chrono duration.
 ///
 /// Example usage:
@@ -145,10 +151,17 @@ Resumption sleep(const typename std::chrono::duration<Rep, Period> &duration)
 /// }
 /// @endcode
 ///
-/// @param duration The sleep duration.
+/// @param condition The condition to wait on. Resume after this returns true.
+/// @param timeout_s Optional timeout in seconds. Zero (or less) signifies no timeout.
 inline Resumption wait(WaitCondition condition, const double timeout_s = 0)
 {
   return Resumption{ .time_s = timeout_s, .condition = std::move(condition) };
+}
+
+/// @overload
+inline Resumption wait(WaitCondition condition, const float timeout_s)
+{
+  return wait(std::move(condition), static_cast<double>(timeout_s));
 }
 
 /// @overload

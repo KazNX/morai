@@ -64,6 +64,8 @@ struct Frame
 /// - `co_await reschedule(priority[, position]);` - reschedule the fibre at the given priority.
 ///  - See @c reschedule()
 /// - `co_await <Id>;` - resume after the fibre with the given @c Id is no longer running.
+/// - `co_await moveTo(scheduler[, priority]);` - move the fibre to another scheduler, optionally
+///   at a new priority.
 /// - `co_return;` - end fibre execution.
 class Fibre
 {
