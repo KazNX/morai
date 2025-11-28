@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Clock.hpp"
 #include "Common.hpp"
 #include "FibreQueue.hpp"
 #include "SharedQueue.hpp"
@@ -89,7 +90,8 @@ namespace morai
 class Scheduler
 {
 public:
-  Scheduler(SchedulerParams params = {});
+  explicit Scheduler(SchedulerParams params = {});
+  explicit Scheduler(Clock clock, SchedulerParams params = {});
   ~Scheduler();
 
   Scheduler(const Scheduler &) = delete;
@@ -112,6 +114,11 @@ public:
 
   /// get the internal time value. Based on the last @c update() call.
   [[nodiscard]] const Time &time() const noexcept { return _time; }
+
+  /// Get the clock object used by this scheduler.
+  [[nodiscard]] Clock &clock() noexcept { return _clock; }
+  /// Get the clock object used by this scheduler.
+  [[nodiscard]] const Clock &clock() const noexcept { return _clock; }
 
   /// Start a fibre.
   ///
@@ -159,7 +166,7 @@ public:
   /// defined, but must be monotonically increasing.
   /// @c std::chrono::system_clock::now().time_since_epoch() makes for a
   /// reasonable default.
-  void update(double epoch_time_s);
+  void update();
 
   /// Move a fibre into this scheduler (threadsafe). This implements the scheduler move operations.
   ///
@@ -186,5 +193,6 @@ private:
   std::vector<FibreQueue> _fibre_queues;
   SharedQueue _move_queue;
   Time _time{};
+  Clock _clock{};
 };
 }  // namespace morai

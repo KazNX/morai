@@ -32,7 +32,12 @@ void generateQueueSelectionSet(std::vector<uint32_t> &set, uint32_t queue_count)
 }  // namespace
 
 ThreadPool::ThreadPool(ThreadPoolParams params)
+  : ThreadPool{ Clock{}, std::move(params) }
+{}
+
+ThreadPool::ThreadPool(Clock clock, ThreadPoolParams params)
   : _idle_sleep_duration(params.idle_sleep_duration)
+  , _clock(std::move(clock))
 {
   createQueues(params);
   startWorkers(params);
@@ -256,7 +261,7 @@ bool ThreadPool::updateNextFibre(uint32_t &selection_index)
   Fibre fibre = nextFibre(selection_index);
   while (fibre.valid())
   {
-    const double epoch_time_s = std::chrono::system_clock::now().time_since_epoch().count();
+    const double epoch_time_s = _clock.epoch();
     const Resume resume = fibre.resume(epoch_time_s);
     if (resume.mode == ResumeMode::Expire || resume.mode == ResumeMode::Moved) [[unlikely]]
     {

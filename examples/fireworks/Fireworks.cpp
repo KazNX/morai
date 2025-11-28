@@ -394,14 +394,12 @@ int main(int argc, char *argv[])
 
   std::shared_ptr<GlobalState> state = std::make_shared<GlobalState>();
 
-  const auto start_time = std::chrono::steady_clock::now();
-
   startFibres(state);
 
   while (!state->quit)
   {
     const auto now = std::chrono::steady_clock::now();
-    state->scheduler.update(std::chrono::duration<double>(now - start_time).count());
+    state->scheduler.update();
     std::this_thread::sleep_until(now + state->frame_interval);
   }
 }

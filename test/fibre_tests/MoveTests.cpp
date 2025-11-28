@@ -1,3 +1,5 @@
+#include "TestClock.hpp"
+
 #include <morai/Finally.hpp>
 #include <morai/Move.hpp>
 #include <morai/Scheduler.hpp>
@@ -13,7 +15,8 @@ TEST(Move, scheduler)
   // Test moving fibres between schedulers.
   struct State
   {
-    std::array<Scheduler, 2> schedulers;
+    std::array<Scheduler, 2> schedulers = { Scheduler{ test::makeClock() },
+                                            Scheduler{ test::makeClock() } };
     int running_on = 0;
   } state;
 
@@ -32,19 +35,16 @@ TEST(Move, scheduler)
   EXPECT_EQ(state.schedulers[0].runningCount(), 1);
   EXPECT_EQ(state.schedulers[1].runningCount(), 0);
 
-  double elapsed = 0.0;
-  const double dt = 0.1;
-
   // Every odd update should see the fibres on the scheduler matching their own ID.
   // First update sees fibre enter up to the move request, so moves won't be completed yet.
-  for (int i = 0; i < 100; ++i, elapsed += dt)
+  for (int i = 0; i < 100; ++i)
   {
     // Update the scheduler it's on right now. That will move the thread once we
     // update other.
     const int initially_on = state.running_on;
     EXPECT_EQ(state.schedulers[initially_on].runningCount(), 1);
     EXPECT_EQ(state.schedulers[1 - initially_on].runningCount(), 0);
-    state.schedulers[initially_on].update(elapsed);
+    state.schedulers[initially_on].update();
 
     // Will have changed schedulers on the first update.
     EXPECT_NE(initially_on, state.running_on);
@@ -52,7 +52,7 @@ TEST(Move, scheduler)
     EXPECT_EQ(state.schedulers[1 - state.running_on].runningCount(), 0);
 
     // Will change back now.
-    state.schedulers[1 - initially_on].update(elapsed);
+    state.schedulers[1 - initially_on].update();
   }
 }
 }  // namespace morai

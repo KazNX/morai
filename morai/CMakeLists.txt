@@ -1,6 +1,7 @@
 add_library(morai)
 target_sources(morai
   PUBLIC
+    Clock.hpp
     Common.hpp
     Fibre.hpp
     FibreQueue.hpp

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Clock.hpp"
 #include "Common.hpp"
 #include "Fibre.hpp"
 #include "SharedQueue.hpp"
@@ -45,7 +46,8 @@ struct ThreadPoolParams : public SchedulerParams
 class ThreadPool
 {
 public:
-  ThreadPool(ThreadPoolParams params = {});
+  explicit ThreadPool(ThreadPoolParams params = {});
+  explicit ThreadPool(Clock clock, ThreadPoolParams params = {});
   ~ThreadPool();
 
   ThreadPool(const ThreadPool &) = delete;
@@ -145,5 +147,6 @@ private:
   std::atomic_flag _paused = ATOMIC_FLAG_INIT;
   std::atomic_flag _quit = ATOMIC_FLAG_INIT;
   std::chrono::milliseconds _idle_sleep_duration{ 1 };
+  Clock _clock;
 };
 }  // namespace morai

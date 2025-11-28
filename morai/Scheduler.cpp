@@ -8,7 +8,12 @@
 namespace morai
 {
 Scheduler::Scheduler(SchedulerParams params)
+  : Scheduler{ Clock{}, std::move(params) }
+{}
+
+Scheduler::Scheduler(Clock clock, SchedulerParams params)
   : _move_queue(0, params.move_queue_size)
+  , _clock(std::move(clock))
 {
   std::ranges::sort(params.priority_levels);
   // Ensure at least one queue.
@@ -70,11 +75,11 @@ void Scheduler::cancelAll()
   _move_queue.clear();
 }
 
-void Scheduler::update(const double epoch_time_s)
+void Scheduler::update()
 {
+  const double epoch_time_s = _clock.update();
   _time.dt = epoch_time_s - _time.epoch_time_s;
   _time.epoch_time_s = epoch_time_s;
-
 
   for (auto &fibre_queue : _fibre_queues)
   {

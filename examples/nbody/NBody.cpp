@@ -351,12 +351,11 @@ int main(int argc, char *argv[])
   // Setup render scheduler.
   state->render_scheduler.start(render_fibre(state), QP_Render, "Render");
 
-  const auto start_time = std::chrono::steady_clock::now();
   bool quit = false;
   while (!quit)
   {
     const auto now = std::chrono::steady_clock::now();
-    state->render_scheduler.update(std::chrono::duration<double>(now - start_time).count());
+    state->render_scheduler.update();
     std::this_thread::sleep_until(now + std::chrono::duration<double>(state->render.target_dt));
     quit = state->input.keyState(weaver::Key::Q) == weaver::KeyState::Down ||
            state->input.keyState(weaver::Key::Escape) == weaver::KeyState::Down;

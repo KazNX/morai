@@ -1,3 +1,5 @@
+#include "TestClock.hpp"
+
 #include <morai/Finally.hpp>
 #include <morai/Log.hpp>
 #include <morai/Scheduler.hpp>
@@ -24,7 +26,7 @@ Fibre ticker()
 
 TEST(Fibre, cancelUnknown)
 {
-  Scheduler scheduler;
+  Scheduler scheduler{ test::makeClock() };
   Id unknown_id{ 9999 };
 
   EXPECT_FALSE(unknown_id.running());
@@ -33,16 +35,13 @@ TEST(Fibre, cancelUnknown)
 
 TEST(Fibre, ticker)
 {
-  Scheduler scheduler;
+  Scheduler scheduler{ test::makeClock() };
   const Id fibre_id = scheduler.start(ticker(), "ticker");
 
-  const double dt = 0.1;
-  double simulated_time_s = 0;
   EXPECT_TRUE(fibre_id.running());
   while (fibre_id.running())
   {
-    scheduler.update(simulated_time_s);
-    simulated_time_s += dt;
+    scheduler.update();
   }
 
   EXPECT_FALSE(fibre_id.running());
@@ -67,20 +66,33 @@ Fibre cancellation(bool *cleaned_up)
 
 TEST(Fibre, cancellation)
 {
-  Scheduler scheduler;
+  Scheduler scheduler{ test::makeClock() };
   bool cleaned_up = false;
-  const Id fibre_id = scheduler.start(cancellation(&cleaned_up), "cancellation");
+  Id fibre_id = scheduler.start(cancellation(&cleaned_up), "cancellation");
 
-  const double dt = 0.1;
-  double simulated_time_s = 0;
   EXPECT_TRUE(fibre_id.running());
   for (int i = 0; i < 5; ++i)
   {
-    scheduler.update(simulated_time_s);
-    simulated_time_s += dt;
+    scheduler.update();
   }
 
+  EXPECT_TRUE(fibre_id.running());
   scheduler.cancel(fibre_id);
+  EXPECT_FALSE(fibre_id.running());
+
+  // Start a new fibre, but cancel via the Id instead.
+  fibre_id = scheduler.start(cancellation(&cleaned_up), "cancellation2");
+  EXPECT_TRUE(fibre_id.running());
+  for (int i = 0; i < 5; ++i)
+  {
+    scheduler.update();
+  }
+
+  EXPECT_TRUE(fibre_id.running());
+  fibre_id.markForCancellation();
+  // Stays running until the next update.
+  EXPECT_TRUE(fibre_id.running());
+  scheduler.update();
   EXPECT_FALSE(fibre_id.running());
 }
 
@@ -95,7 +107,7 @@ TEST(Fibre, await)
     bool signal = false;
   };
 
-  Scheduler scheduler;
+  Scheduler scheduler{ test::makeClock(0.01) };
   SharedState state;
 
   const auto waiter_fibre = [&state]() -> Fibre {
@@ -118,10 +130,10 @@ TEST(Fibre, await)
   scheduler.start(waiter_fibre(), "waiter");
   scheduler.start(signaller_fibre(), "signaller");
 
-  const auto update_dt = 0.01;
-  for (state.time = 0; state.time < 1.0 && !scheduler.empty(); state.time += update_dt)
+  for (state.time = scheduler.clock().epoch(); state.time < 1.0 && !scheduler.empty();
+       state.time += scheduler.clock().epoch())
   {
-    scheduler.update(state.time);
+    scheduler.update();
   }
 
   EXPECT_TRUE(state.signal);
@@ -131,7 +143,7 @@ TEST(Fibre, await)
 
 TEST(Fibre, spawn)
 {
-  Scheduler scheduler;
+  Scheduler scheduler{ test::makeClock() };
 
   const auto child_fibre = [](int id) -> Fibre {
     std::cout << "Child fibre " << id << " started\n";
@@ -155,13 +167,10 @@ TEST(Fibre, spawn)
 
   Id parent_id = scheduler.start(parent_fibre(), "parent");
 
-  const double dt = 0.1;
-  double simulated_time_s = 0;
   EXPECT_TRUE(parent_id.running());
   while (parent_id.running())
   {
-    scheduler.update(simulated_time_s);
-    simulated_time_s += dt;
+    scheduler.update();
   }
 
   EXPECT_FALSE(parent_id.running());
@@ -171,7 +180,7 @@ TEST(Fibre, spawn)
 
 TEST(Fibre, spawnAndCancel)
 {
-  Scheduler scheduler;
+  Scheduler scheduler{ test::makeClock() };
 
   const auto child_fibre = [](int id, bool persist = false) -> Fibre {
     std::cout << std::format("Child fibre {} started - persist {}\n", id, persist);
@@ -207,12 +216,9 @@ TEST(Fibre, spawnAndCancel)
   const Id persistent_id = scheduler.start(child_fibre(99, true), "persistent");
 
   const double dt = 0.1;
-  double simulated_time_s = 0;
-  EXPECT_TRUE(parent_id.running());
   while (parent_id.running())
   {
-    scheduler.update(simulated_time_s);
-    simulated_time_s += dt;
+    scheduler.update();
   }
 
   EXPECT_FALSE(parent_id.running());
@@ -223,7 +229,7 @@ TEST(Fibre, spawnAndCancel)
 
 TEST(Fibre, exceptionPropagation)
 {
-  Scheduler scheduler;
+  Scheduler scheduler{ test::makeClock() };
 
   const auto faulty_fibre = []() -> Fibre {
     std::cout << "Faulty fibre started\n";
@@ -234,22 +240,19 @@ TEST(Fibre, exceptionPropagation)
 
   const Id fibre_id = scheduler.start(faulty_fibre(), "faulty");
 
-  const double dt = 0.1;
-  double simulated_time_s = 0;
   EXPECT_TRUE(fibre_id.running());
   bool exception_caught = false;
   while (fibre_id.running())
   {
     try
     {
-      scheduler.update(simulated_time_s);
+      scheduler.update();
     }
     catch (const std::runtime_error &e)
     {
       std::cout << "Caught exception from fibre: " << e.what() << '\n';
       exception_caught = true;
     }
-    simulated_time_s += dt;
   }
 
   EXPECT_FALSE(fibre_id.running());
@@ -282,7 +285,7 @@ void priorityTest(std::span<std::pair<int32_t, int32_t>> id_priority_pairs, bool
     }
   }
 
-  Scheduler scheduler{ std::move(params) };
+  Scheduler scheduler{ { test::makeClock() }, std::move(params) };
   std::vector<int32_t> execution_order;
   std::vector<int32_t> shutdown_order;
 
@@ -306,8 +309,8 @@ void priorityTest(std::span<std::pair<int32_t, int32_t>> id_priority_pairs, bool
                     std::format("fibre{}", id_priority_pair.first));
   }
 
-  scheduler.update(0);
-  scheduler.update(1);
+  scheduler.update();
+  scheduler.update();
 
   std::ranges::sort(id_priority_pairs,
                     [](const std::pair<int32_t, int32_t> &a, const std::pair<int32_t, int32_t> &b) {
@@ -357,7 +360,7 @@ TEST(Fibre, queueResize)
 {
   const uint32_t queue_size = 4u;
   SchedulerParams params = { .initial_queue_size = queue_size };
-  Scheduler scheduler{ std::move(params) };
+  Scheduler scheduler{ { test::makeClock() }, std::move(params) };
 
   struct SharedState
   {
@@ -377,12 +380,10 @@ TEST(Fibre, queueResize)
     scheduler.start(fibre_entry(state), std::format("fibre{}", i));
   }
 
-  double elapsed = 0;
-  const double dt = 0.1;
-  scheduler.update(elapsed += dt);
+  scheduler.update();
   EXPECT_EQ(state.entered, fibre_count);
   EXPECT_EQ(state.completed, 0u);
-  scheduler.update(elapsed += dt);
+  scheduler.update();
   EXPECT_EQ(state.completed, fibre_count);
 }
 
@@ -401,7 +402,7 @@ TEST(Fibre, incorrectPriority)
   log::setHook(log_hook);
   const auto clear_hook = finally([]() { log::clearHook(); });
 
-  Scheduler scheduler{ { .priority_levels = { -1, 1, 2 } } };
+  Scheduler scheduler{ { test::makeClock() }, { .priority_levels = { -1, 1, 2 } } };
 
   scheduler.start(ticker(), 0);   // Mismatch.
   scheduler.start(ticker(), -2);  // Mismatch.

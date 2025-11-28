@@ -86,6 +86,6 @@ cmake --build build --config Release -j
     - [x] ~~Support awaiting multiple fibres~~
   - [x] Logging interface
 - Consider
-- [ ] `Clock` object given to a scheduler on construction to allow an alternative clock
-  - [ ] Allow `ThreadPool` to use a custom clock.
+- [x] `Clock` object given to a scheduler on construction to allow an alternative clock
+  - [x] Allow `ThreadPool` to use a custom clock.
 - [x] `ThreadPool` cancellation list to support ~~`ThreadPool::cancel()`~~ cancellation via `Id::markForCancellation()`.
