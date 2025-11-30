@@ -215,7 +215,6 @@ TEST(Fibre, spawnAndCancel)
   const Id parent_id = scheduler.start(parent_fibre(), "parent");
   const Id persistent_id = scheduler.start(child_fibre(99, true), "persistent");
 
-  const double dt = 0.1;
   while (parent_id.running())
   {
     scheduler.update();

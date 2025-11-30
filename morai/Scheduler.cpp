@@ -130,8 +130,11 @@ FibreQueue &Scheduler::selectQueue(int32_t priority, bool quiet)
   }
 
   FibreQueue &queue = _fibre_queues.at(best_idx);
-  log::error(
-    std::format("Scheduler: Fibre priority mismatch: {} moved to {}", priority, queue.priority()));
+  if (!quiet)
+  {
+    log::error(std::format("Scheduler: Fibre priority mismatch: {} moved to {}", priority,
+                           queue.priority()));
+  }
 
   return queue;
 }

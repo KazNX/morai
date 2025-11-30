@@ -12,7 +12,7 @@ namespace morai
 {
 namespace
 {
-void generateQueueSelectionSet(std::vector<uint32_t> &set, uint32_t queue_count)
+void generateQueueSelectionSet(std::vector<uint32_t> &set, size_t queue_count)
 {
   // Simple weighting: given 4 queues, we generate:
   //  { 0, 0, 0, 0, 1, 1, 1, 2, 2, 3 }
@@ -20,7 +20,7 @@ void generateQueueSelectionSet(std::vector<uint32_t> &set, uint32_t queue_count)
   // - Update [1] 3 times
   // - Update [2] 2 times
   // - Update [3] 1 times
-  for (uint32_t i = 0; i < queue_count; ++i)
+  for (uint32_t i = 0; i < static_cast<uint32_t>(queue_count); ++i)
   {
     const auto weighting = (queue_count - i);
     for (uint32_t j = 0; j < weighting; ++j)
@@ -173,8 +173,11 @@ SharedQueue &ThreadPool::selectQueue(int32_t priority, bool quiet)
   }
 
   SharedQueue &queue = *_fibre_queues.at(best_idx);
-  log::error(std::format("Thread Pool: Fibre priority mismatch: {} moved to {}", priority,
-                         queue.priority()));
+  if (!quiet)
+  {
+    log::error(std::format("Thread Pool: Fibre priority mismatch: {} moved to {}", priority,
+                           queue.priority()));
+  }
 
   return queue;
 }
@@ -243,7 +246,8 @@ void ThreadPool::startWorkers(ThreadPoolParams &params)
   }
 }
 
-void ThreadPool::workerThread(int32_t thread_index, std::chrono::milliseconds idle_sleep_duration)
+void ThreadPool::workerThread([[maybe_unused]] int32_t thread_index,
+                              std::chrono::milliseconds idle_sleep_duration)
 {
   uint32_t selection_index = 0;
   while (!_quit.test())
@@ -302,6 +306,12 @@ bool ThreadPool::updateNextFibre(uint32_t &selection_index)
         SharedQueue &new_queue = selectQueue(reschedule.priority, true);
         // Update fibre priority and reschedule.
         fibre.__setPriority(reschedule.priority);
+        // Try push onto the new queue. This may fail, in which case we'll try move it back to the
+        // source queue.
+        if (new_queue.tryPush(fibre))
+        {
+          return true;
+        }
       }
     }
 
