@@ -1,7 +1,7 @@
 # Morai fiber libraray
 
-Morai is a fibre or microthread library implemented in C++ using C++ coroutine support. Fibres
-are a lightweight cooperative multi-tasking mechanism running in a single thread.
+Morai is a C++ fibre or microthread library using C++ coroutines. Fibres are a lightweight
+cooperative multi-tasking mechanism running in a single thread.
 
 ## The Morai name
 
@@ -31,14 +31,14 @@ sudo apt install -y libncurses-dev
 Linux/MacOS:
 
 ```bash
-# Setting ARACHNE_BUILD_EXAMPLES is optional. Examples are off by default.
-cmake -B build -G"Ninja Multi-Config" -DARACHNE_BUILD_EXAMPLES=ON
+# Setting MORAI_BUILD_EXAMPLES is optional. Examples are off by default.
+cmake -B build -G"Ninja Multi-Config" -DMORAI_BUILD_EXAMPLES=ON
 cmake --build build --config Release -j
 # Or
-cmake -B build -G"Ninja" -DCMAKE_BUILD_TYPE=Release -DARACHNE_BUILD_EXAMPLES=ON
+cmake -B build -G"Ninja" -DCMAKE_BUILD_TYPE=Release -DMORAI_BUILD_EXAMPLES=ON
 cmake --build build -j
 # Or
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DARACHNE_BUILD_EXAMPLES=ON
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DMORAI_BUILD_EXAMPLES=ON
 cmake --build build -j
 ```
 
@@ -49,7 +49,7 @@ Windows:
 # Build with examples
 # The toolchain and VCPKG manifest variables can be skipped if pdcurses is
 # otherwise available on the system.
-cmake -B build2 -G"Ninja Multi-Config" -DARACHNE_BUILD_EXAMPLES=ON `
+cmake -B build2 -G"Ninja Multi-Config" -DMORAI_BUILD_EXAMPLES=ON `
   -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" `
   -DVCPKG_MANIFEST_FEATURES=examples
 cmake --build build --config Release -j

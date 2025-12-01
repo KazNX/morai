@@ -1,4 +1,5 @@
 add_library(weaver SHARED)
+morai_configure_target(weaver)
 
 include(GenerateExportHeader)
 

@@ -1,7 +1,11 @@
 # Project setup and minimum cmake version.
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.23 FATAL_ERROR)
 
 project(morai LANGUAGES CXX)
+
+set(MORAI_VERSION_MAJOR 0)
+set(MORAI_VERSION_MINOR 1)
+set(MORAI_VERSION_PATCH 0)
 
 # C++ standards setup.
 if(NOT CMAKE_CXX_STANDARD)
@@ -13,11 +17,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 list(APPEND CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}")
 
+include(targets)
 include(tools)
 
 # Add project level options here.
-option(ARACHNE_BUILD_TESTS "Build unit tests?" ON)
-option(ARACHNE_BUILD_EXAMPLES "Build unit tests?" OFF)
+option(MORAI_BUILD_TESTS "Build unit tests?" ON)
+option(MORAI_BUILD_EXAMPLES "Build unit tests?" OFF)
 
 set(ConfigPackageLocation lib/cmake/morai)
 
@@ -48,11 +53,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # Include sub projects.
 add_subdirectory(morai)
 
-if(ARACHNE_BUILD_EXAMPLES)
+if(MORAI_BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
 
-if(ARACHNE_BUILD_TESTS)
+if(MORAI_BUILD_TESTS)
   # We can enable testing here and/or in the subdirectory, but doing it here allows us to run CTest from the build root.
   # To run the tests, we execute:
   #   CTest -C [Debug|Release|RelWithDebInfo|MinSizeRel] --output-on-failure
@@ -64,3 +69,24 @@ if(ARACHNE_BUILD_TESTS)
   enable_testing()
   add_subdirectory(test)
 endif()
+
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/package-config.in.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/morai-config.cmake"
+  @ONLY
+)
+
+export(EXPORT morai-targets
+  FILE "${CMAKE_CURRENT_BINARY_DIR}/morai-targets.cmake"
+  NAMESPACE morai::
+)
+
+install(
+  FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/morai-config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/morai-targets.cmake"
+  DESTINATION "${ConfigPackageLocation}"
+  COMPONENT Dev
+)
+
+include(pack)

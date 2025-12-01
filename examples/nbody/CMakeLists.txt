@@ -1,4 +1,5 @@
 add_executable(nbody)
+morai_configure_target(nbody)
 
 target_sources(nbody
   PRIVATE

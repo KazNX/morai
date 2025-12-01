@@ -1,4 +1,5 @@
 add_executable(fireworks)
+morai_configure_target(fireworks)
 
 target_sources(fireworks
   PRIVATE
