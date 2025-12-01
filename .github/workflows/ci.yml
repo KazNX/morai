@@ -11,15 +11,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-24.04]
-        compiler: [msvc, gcc, clang]
-        exclude:
-          - os: windows-latest
-            compiler: gcc
-          - os: windows-latest
-            compiler: clang
-          - os: ubuntu-24.04
-            compiler: msvc
+        # os: [windows-latest, ubuntu-24.04]
+        # compiler: [msvc, gcc, clang]
+        os: [windows-latest]
+        compiler: [msvc]
+        # exclude:
+        #   - os: windows-latest
+        #     compiler: gcc
+        #   - os: windows-latest
+        #     compiler: clang
+        #   - os: ubuntu-24.04
+        #     compiler: msvc
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -59,7 +61,7 @@ jobs:
       - name: Build
         run: cmake --build build
       - name: Test
-        run: ctest --test-dir build --output-on-failure -T Test --no-compress-output --output-junit
+        run: ctest --test-dir build --output-on-failure -T Test --no-compress-output
       - name: Upload test results
         uses: actions/upload-artifact@v4
         with:

@@ -17,3 +17,5 @@ target_link_libraries(fibre_tests
     morai
     gtest_main
 )
+
+gtest_add_tests(TARGET fibre_tests --gtest_output=xml:test-reports/)
