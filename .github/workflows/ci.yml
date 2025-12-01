@@ -7,63 +7,72 @@ on:
     branches: [main]
 
 jobs:
-  build-test-pack:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        # os: [windows-latest, ubuntu-24.04]
-        # compiler: [msvc, gcc, clang]
-        os: [windows-latest]
-        compiler: [msvc]
-        # exclude:
-        #   - os: windows-latest
-        #     compiler: gcc
-        #   - os: windows-latest
-        #     compiler: clang
-        #   - os: ubuntu-24.04
-        #     compiler: msvc
+  build-windows:
+    runs-on: windows-latest
     steps:
-      - name: Checkout code
+      - &checkout
+        name: Checkout code
         uses: actions/checkout@v4
-      - name: Install .NET SDK
-        if: matrix.os == 'windows-latest'
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-      - name: Install WiX v6
-        if: matrix.os == 'windows-latest'
-        run: dotnet tool install --global wix --version 6.0.2
-        shell: powershell
-      - name: Verify WiX
-        if: matrix.os == 'windows-latest'
-        run: wix --version
-        shell: powershell
       - name: Set up Ninja
         uses: seanmiddleditch/gha-setup-ninja@v4
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v2
       - name: Set up Compiler
-        if: matrix.os == 'windows-latest' && matrix.compiler == 'msvc'
         uses: ilammy/msvc-dev-cmd@v1
       - name: Set up vcpkg
-        if: matrix.os == 'windows-latest' && matrix.compiler == 'msvc'
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgJsonGlob: "**/vcpkg.json"
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install WiX v6
+        run: dotnet tool install --global wix --version 6.0.2
+        shell: powershell
+      - name: CMake Configure
+        run: cmake -S . -B build -G "Ninja Multi-Config" -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake -DVCPKG_MANIFEST_FEATURES=examples
+      - name: Build Debug
+        run: cmake --build build --config Debug
+      - name: Build Release
+        run: cmake --build build --config Release
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -T Test --no-compress-output -C Release
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/Testing/**/*.xml
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action/composite@v2
+        with:
+          junit_files: build/Testing/**/*.xml
+      # - name: Pack
+      #   run: cpack --config build/CPackConfig.cmake
+  build-linux:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+        compiler: [gcc, clang]
+    steps:
+      - *checkout
+      - name: Set up Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
+      - name: Set up CMake
+        uses: jwlawson/actions-setup-cmake@v2
       - name: Install Ubuntu dependencies
         if: matrix.os == 'ubuntu-24.04'
         run: sudo apt-get update && sudo apt-get install -y ninja-build libncurses-dev cmake
-      - name: Install GCC
-        if: matrix.os == 'ubuntu-24.04' && matrix.compiler == 'gcc'
-        run: sudo apt-get update && sudo apt-get install -y g++
-      - name: Install Clang
-        if: matrix.os == 'ubuntu-24.04' && matrix.compiler == 'clang'
-        run: sudo apt-get update && sudo apt-get install -y clang
+      - name: Install Compiler
+        run: |
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            sudo apt-get update && sudo apt-get install -y g++
+          else
+            sudo apt-get update && sudo apt-get install -y clang
+          fi
+        shell: bash
       - name: CMake Configure
-        if: matrix.compiler == 'msvc'
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake -DVCPKG_MANIFEST_FEATURES=examples
-      - name: CMake Configure
-        if: matrix.compiler != 'msvc'
         run: |
           if [ "${{ matrix.compiler }}" = "clang" ]; then
             export CC=clang
@@ -81,8 +90,7 @@ jobs:
           name: test-results
           path: build/Testing/**/*.xml
       - name: Publish test results
-        if: matrix.os == 'ubuntu-24.04'
-        uses: EnricoMi/publish-unit-test-result-action/composite@v2
+        uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           junit_files: build/Testing/**/*.xml
       - name: Pack
