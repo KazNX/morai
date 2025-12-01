@@ -46,7 +46,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang
       - name: Configure CMake
         if: matrix.compiler == 'msvc'
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON -DCMAKE_TOOLCHAIN_FILE=${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake -DVCPKG_MANIFEST_FEATURES=examples
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake -DVCPKG_MANIFEST_FEATURES=examples
       - name: Configure CMake
         if: matrix.compiler != 'msvc'
         run: |
