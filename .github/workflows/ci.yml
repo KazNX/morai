@@ -72,5 +72,8 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action/composite@v2
         with:
           junit_files: build/Testing/**/*.xml
+      - name: Install WiX Toolset
+        if: matrix.os == 'windows-latest'
+        run: choco install wix --no-progress --yes
       - name: Pack
         run: cpack --config build/CPackConfig.cmake
