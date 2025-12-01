@@ -5,6 +5,6 @@ function(morai_configure_target TARGET)
       # Enable warnings, conformance and debug info.
       $<$<CXX_COMPILER_ID:MSVC>:/W4 /permissive- /Zc:__cplusplus /WX /Zi>
       # More warnings.
-      $<$<CXX_COMPILER_ID:AppleClang,Clang,GCC,IntelLLVM>:-Wall -Wextra -Wpedantic -Werror>
+      $<$<CXX_COMPILER_ID:AppleClang,Clang,GCC,IntelLLVM>:-Wall -Wextra -Wpedantic -Werror -Wno-logical-op-parentheses>
   )
 endfunction(morai_configure_target)
