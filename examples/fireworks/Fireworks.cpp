@@ -114,8 +114,6 @@ morai::Fibre fizzle(std::shared_ptr<GlobalState> state, weaver::Coord position, 
 
   while (duration > 0)
   {
-    const size_t index =
-      static_cast<size_t>((1.0f - (duration / duration)) * static_cast<float>(sprites.size() - 1));
     const auto sprite = sprites[sprite_dist(state->rng)];
     state->background().setCharacter(position, sprite);
     co_yield {};
@@ -348,7 +346,7 @@ struct Options
   // Nothing right now.
 };
 
-int parseArgs(Options &options, int argc, char *argv[])
+int parseArgs([[maybe_unused]] Options &options, int argc, char *argv[])
 {
   try
   {

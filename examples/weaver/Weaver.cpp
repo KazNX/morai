@@ -65,7 +65,7 @@ Screen::Screen()
 
 Screen::~Screen() = default;
 
-bool setViewport(const Viewport &viewport)
+bool setViewport([[maybe_unused]] const Viewport &viewport)
 {
   return false;
 }
@@ -120,8 +120,6 @@ void Screen::draw()
   int height = getmaxy(_imp->window.get());
   for (const auto &layer : _imp->layers)
   {
-    const int y = layer.view.viewport().origin.y;
-    const int width = layer.view.viewport().size.width;
     for (int y = layer.view.viewport().origin.y; y < layer.view.viewport().origin.y + height; ++y)
     {
       for (int x = layer.view.viewport().origin.x; x < layer.view.viewport().origin.x + width; ++x)
