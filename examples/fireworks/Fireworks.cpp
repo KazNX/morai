@@ -27,11 +27,9 @@ struct Range
 constexpr double LAUNCH_DELAY = 0.1;
 constexpr Range AUTO_LAUNCH_WINDOW = { 0.2, 2.0 };
 constexpr float FIZZLE_DURATION = 0.6f;
-constexpr float FIZZLE_SHORT_DURATION = 0.2f;
 constexpr float FIZZLE_STDDEV = 0.3f;
 constexpr float GRAVITY = 3.0f;
 constexpr Range SPARKS{ 10, 20 };            // Number of sparks to spawn
-constexpr Range SPARK_DELAY{ 0.0f, 0.05f };  // Delay between spawning sparks
 constexpr Range SPARK_SPEED{ 5.0f, 10.0f };  // Initial spark speed
 constexpr Range SPARK_LIFETIME{ 1.5f, 2.5f };
 

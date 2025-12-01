@@ -57,11 +57,7 @@ void View::setString(Coord at, std::string_view text, bool clear_eol)
 
 Screen::Screen()
   : _imp(std::make_unique<ScreenImp>())
-{
-  int width = getmaxx(_imp->window.get());
-  int height = getmaxy(_imp->window.get());
-  width = height;
-}
+{}
 
 Screen::~Screen() = default;
 
