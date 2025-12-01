@@ -74,6 +74,6 @@ jobs:
           junit_files: build/Testing/**/*.xml
       - name: Install WiX Toolset
         if: matrix.os == 'windows-latest'
-        run: choco install wix --no-progress --yes
+        run: choco install wixtoolset --no-progress --yes
       - name: Pack
         run: cpack --config build/CPackConfig.cmake
