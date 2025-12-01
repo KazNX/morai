@@ -38,15 +38,15 @@ jobs:
         run: cmake --build build --config Release
       - name: Test
         run: ctest --test-dir build --output-on-failure -T Test --no-compress-output -C Release
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: build/Testing/**/*.xml
-      - name: Publish test results
-        uses: EnricoMi/publish-unit-test-result-action/composite@v2
-        with:
-          junit_files: build/Testing/**/*.xml
+      # - name: Upload test results
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: test-results
+      #     path: build/Testing/**/*.xml
+      # - name: Publish test results
+      #   uses: EnricoMi/publish-unit-test-result-action/composite@v2
+      #   with:
+      #     junit_files: build/Testing/**/*.xml
       # - name: Pack
       #   run: cpack --config build/CPackConfig.cmake
   build-linux:
@@ -62,7 +62,6 @@ jobs:
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v2
       - name: Install Ubuntu dependencies
-        if: matrix.os == 'ubuntu-24.04'
         run: sudo apt-get update && sudo apt-get install -y ninja-build libncurses-dev cmake
       - name: Install Compiler
         run: |
@@ -84,14 +83,14 @@ jobs:
         run: cmake --build build
       - name: Test
         run: ctest --test-dir build --output-on-failure -T Test --no-compress-output
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: build/Testing/**/*.xml
-      - name: Publish test results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          junit_files: build/Testing/**/*.xml
+      # - name: Upload test results
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: test-results
+      #     path: build/Testing/**/*.xml
+      # - name: Publish test results
+      #   uses: EnricoMi/publish-unit-test-result-action@v2
+      #   with:
+      #     junit_files: build/Testing/**/*.xml
       - name: Pack
         run: cpack --config build/CPackConfig.cmake

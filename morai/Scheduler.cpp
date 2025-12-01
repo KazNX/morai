@@ -173,8 +173,23 @@ void Scheduler::updateQueue(const double epoch_time_s, FibreQueue &queue)
     {
       // Propagate exception and expire.
       std::exception_ptr ex = fibre.exception();
-      // TODO: Add an option to log instead of rethrowing.
-      std::rethrow_exception(ex);
+      try
+      {
+        if (ex)
+        {
+          std::rethrow_exception(ex);
+        }
+      }
+      catch (const std::exception &e)
+      {
+        log::error(std::format("Scheduler fibre {}:{} exception: {}", fibre.id().id(), fibre.name(),
+                               e.what()));
+      }
+      catch (...)
+      {
+        log::error(
+          std::format("Scheduler fibre {}:{} unknown exception.", fibre.id().id(), fibre.name()));
+      }
       ++expired_count;
       continue;  // Unreachable.
     }
