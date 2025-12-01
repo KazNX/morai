@@ -25,6 +25,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Install .NET SDK
+        if: matrix.os == 'windows-latest'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install WiX v6
+        if: matrix.os == 'windows-latest'
+        run: dotnet tool install --global wix --version 6.0.2
+        shell: powershell
+      - name: Verify WiX
+        if: matrix.os == 'windows-latest'
+        run: wix --version
+        shell: powershell
       - name: Set up Ninja
         uses: seanmiddleditch/gha-setup-ninja@v4
       - name: Set up CMake
@@ -72,8 +85,5 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action/composite@v2
         with:
           junit_files: build/Testing/**/*.xml
-      - name: Install WiX Toolset
-        if: matrix.os == 'windows-latest'
-        run: choco install wixtoolset --no-progress --yes
       - name: Pack
         run: cpack --config build/CPackConfig.cmake
