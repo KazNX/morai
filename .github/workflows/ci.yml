@@ -34,6 +34,11 @@ jobs:
         run: cmake --build build --config Release
       - name: Test
         run: ctest --test-dir build --output-on-failure --no-compress-output -C Release --output-junit junit.xml
+      - name: Publish test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action/composite@v2
+        with:
+          files: build/junit.xml
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -90,6 +95,11 @@ jobs:
         run: cmake --build build --config Release
       - name: Test
         run: ctest --test-dir build --output-on-failure --no-compress-output -C Release --output-junit junit.xml
+      - name: Publish test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: build/junit.xml
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
