@@ -23,13 +23,6 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgJsonGlob: "**/vcpkg.json"
-      - name: Install .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-      - name: Install WiX v6
-        run: dotnet tool install --global wix --version 6.0.2
-        shell: powershell
       - name: CMake Configure
         run: cmake -S . -B build -G "Ninja Multi-Config" -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake -DVCPKG_MANIFEST_FEATURES=examples
       - name: Build Debug
@@ -47,6 +40,15 @@ jobs:
       #   uses: EnricoMi/publish-unit-test-result-action/composite@v2
       #   with:
       #     junit_files: build/Testing/**/*.xml
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install WiX v6
+        run: |
+          dotnet tool install --global wix --version 6.0.2
+          wix extension add WixToolset.UI.wixext
+        shell: powershell
       - name: Pack
         run: cpack --config build/CPackConfig.cmake -C Release
   build-linux:
