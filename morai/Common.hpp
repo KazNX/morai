@@ -20,6 +20,14 @@ struct SchedulerParams
   std::vector<int32_t> priority_levels{};
 };
 
+enum class ExceptionHandling
+{
+  /// Log exceptions and continue running.
+  Log,
+  /// Rethrow exceptions to the caller of @c Scheduler::update().
+  Rethrow,
+};
+
 /// Time structure used by @c Scheduler to track time.
 struct Time
 {

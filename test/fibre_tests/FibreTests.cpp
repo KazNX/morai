@@ -228,7 +228,7 @@ TEST(Fibre, spawnAndCancel)
 
 TEST(Fibre, exceptionPropagation)
 {
-  Scheduler scheduler{ test::makeClock() };
+  Scheduler scheduler{ test::makeClock(), ExceptionHandling::Rethrow };
 
   const auto faulty_fibre = []() -> Fibre {
     std::cout << "Faulty fibre started\n";
@@ -237,7 +237,7 @@ TEST(Fibre, exceptionPropagation)
     co_yield {};
   };
 
-  const Id fibre_id = scheduler.start(faulty_fibre(), "faulty");
+  Id fibre_id = scheduler.start(faulty_fibre(), "faulty");
 
   EXPECT_TRUE(fibre_id.running());
   bool exception_caught = false;
@@ -256,6 +256,28 @@ TEST(Fibre, exceptionPropagation)
 
   EXPECT_FALSE(fibre_id.running());
   EXPECT_TRUE(exception_caught);
+
+  // Ensure log mode does not throw.
+  scheduler.setExceptionHandling(ExceptionHandling::Log);
+  fibre_id = scheduler.start(faulty_fibre(), "faulty");
+
+  EXPECT_TRUE(fibre_id.running());
+  exception_caught = false;
+  while (fibre_id.running())
+  {
+    try
+    {
+      scheduler.update();
+    }
+    catch (const std::runtime_error &e)
+    {
+      std::cout << "Caught exception from fibre: " << e.what() << '\n';
+      exception_caught = true;
+    }
+  }
+
+  EXPECT_FALSE(fibre_id.running());
+  EXPECT_FALSE(exception_caught);
 }
 
 void priorityTest(std::span<std::pair<int32_t, int32_t>> id_priority_pairs, bool const log = false,

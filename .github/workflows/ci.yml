@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - &checkout
+        name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
+      - name: Set up CMake
+        uses: jwlawson/actions-setup-cmake@v2
+      - name: Set up Compiler
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Set up vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgJsonGlob: "**/vcpkg.json"
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install WiX v6
+        run: dotnet tool install --global wix --version 6.0.2
+        shell: powershell
+      - name: CMake Configure
+        run: cmake -S . -B build -G "Ninja Multi-Config" -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake -DVCPKG_MANIFEST_FEATURES=examples
+      - name: Build Debug
+        run: cmake --build build --config Debug
+      - name: Build Release
+        run: cmake --build build --config Release
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -T Test --no-compress-output -C Release
+      # - name: Upload test results
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: test-results
+      #     path: build/Testing/**/*.xml
+      # - name: Publish test results
+      #   uses: EnricoMi/publish-unit-test-result-action/composite@v2
+      #   with:
+      #     junit_files: build/Testing/**/*.xml
+      # - name: Pack
+      #   run: cpack --config build/CPackConfig.cmake
+  build-linux:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+        compiler: [gcc, clang]
+    steps:
+      - *checkout
+      - name: Set up Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
+      - name: Set up CMake
+        uses: jwlawson/actions-setup-cmake@v2
+      - name: Install Ubuntu dependencies
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libncurses-dev cmake
+      - name: Install Compiler
+        run: |
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            sudo apt-get update && sudo apt-get install -y g++
+          else
+            sudo apt-get update && sudo apt-get install -y clang
+          fi
+        shell: bash
+      - name: CMake Configure
+        run: |
+          if [ "${{ matrix.compiler }}" = "clang" ]; then
+            export CC=clang
+            export CXX=clang++
+          fi
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON
+        shell: bash
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -T Test --no-compress-output
+      # - name: Upload test results
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: test-results
+      #     path: build/Testing/**/*.xml
+      # - name: Publish test results
+      #   uses: EnricoMi/publish-unit-test-result-action@v2
+      #   with:
+      #     junit_files: build/Testing/**/*.xml
+      - name: Pack
+        run: cpack --config build/CPackConfig.cmake

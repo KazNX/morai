@@ -90,8 +90,11 @@ namespace morai
 class Scheduler
 {
 public:
-  explicit Scheduler(SchedulerParams params = {});
-  explicit Scheduler(Clock clock, SchedulerParams params = {});
+  explicit Scheduler(SchedulerParams params = {},
+                     ExceptionHandling exception_handling = ExceptionHandling::Log);
+  explicit Scheduler(Clock clock, SchedulerParams params = {},
+                     ExceptionHandling exception_handling = ExceptionHandling::Log);
+  Scheduler(Clock clock, ExceptionHandling exception_handling);
   ~Scheduler();
 
   Scheduler(const Scheduler &) = delete;
@@ -119,6 +122,12 @@ public:
   [[nodiscard]] Clock &clock() noexcept { return _clock; }
   /// Get the clock object used by this scheduler.
   [[nodiscard]] const Clock &clock() const noexcept { return _clock; }
+
+  /// Get the exception handling mode.
+  [[nodiscard]] ExceptionHandling exceptionHandling() const noexcept { return _exception_handling; }
+
+  /// Set exception handling. Affects the next @c update().
+  void setExceptionHandling(const ExceptionHandling mode) noexcept { _exception_handling = mode; }
 
   /// Start a fibre.
   ///
@@ -194,5 +203,6 @@ private:
   SharedQueue _move_queue;
   Time _time{};
   Clock _clock{};
+  ExceptionHandling _exception_handling = ExceptionHandling::Log;
 };
 }  // namespace morai
