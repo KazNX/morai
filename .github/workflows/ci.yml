@@ -38,6 +38,7 @@ jobs:
         if: (!cancelled())
         uses: EnricoMi/publish-unit-test-result-action/windows@v2
         with:
+          check_name: Test results windows-msvc
           comment_mode: off
           files: build/junit.xml
       - name: Upload test results
@@ -101,6 +102,7 @@ jobs:
         if: (!cancelled())
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
+          check_name: Test results ${{ matrix.os }}-${{ matrix.compiler }}
           comment_mode: off
           files: build/junit.xml
       - name: Upload test results
