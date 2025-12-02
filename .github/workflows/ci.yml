@@ -9,6 +9,9 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    permissions:
+      checks: write
+      contents: read
     steps:
       - &checkout
         name: Checkout code
@@ -55,6 +58,9 @@ jobs:
         run: cpack --config build/CPackConfig.cmake -C Release
   build-linux:
     runs-on: ${{ matrix.os }}
+    permissions:
+      checks: write
+      contents: read
     strategy:
       matrix:
         os: [ubuntu-24.04]
