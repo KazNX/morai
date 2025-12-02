@@ -42,7 +42,7 @@ jobs:
           path: build/junit.xml
       - name: Publish test results
         if: always()
-        uses: EnricoMi/publish-unit-test-result-action@v2
+        uses: EnricoMi/publish-unit-test-result-action/composite@v2
         with:
           files: build/junit.xml
       - name: Install .NET SDK
