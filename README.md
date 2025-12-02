@@ -1,5 +1,7 @@
 # Morai fiber libraray
 
+![Build](https://github.com/KazNX/morai/actions/workflows/ci.yml/badge.svg)
+
 Morai is a C++ fibre or microthread library using C++ coroutines. Fibres are a lightweight
 cooperative multi-tasking mechanism running in a single thread.
 

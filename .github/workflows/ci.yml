@@ -9,6 +9,9 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    permissions:
+      checks: write
+      contents: read
     steps:
       - &checkout
         name: Checkout code
@@ -23,13 +26,6 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgJsonGlob: "**/vcpkg.json"
-      - name: Install .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-      - name: Install WiX v6
-        run: dotnet tool install --global wix --version 6.0.2
-        shell: powershell
       - name: CMake Configure
         run: cmake -S . -B build -G "Ninja Multi-Config" -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake -DVCPKG_MANIFEST_FEATURES=examples
       - name: Build Debug
@@ -37,20 +33,29 @@ jobs:
       - name: Build Release
         run: cmake --build build --config Release
       - name: Test
-        run: ctest --test-dir build --output-on-failure -T Test --no-compress-output -C Release
-      # - name: Upload test results
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: test-results
-      #     path: build/Testing/**/*.xml
-      # - name: Publish test results
-      #   uses: EnricoMi/publish-unit-test-result-action/composite@v2
-      #   with:
-      #     junit_files: build/Testing/**/*.xml
-      # - name: Pack
-      #   run: cpack --config build/CPackConfig.cmake
+        run: ctest --test-dir build --output-on-failure --no-compress-output -C Release --output-junit junit.xml
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-windows-msvc
+          path: build/junit.xml
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install WiX v6
+        run: |
+          dotnet tool install --global wix --version 6.0.2
+          wix extension add WixToolset.UI.wixext
+        shell: powershell
+      - name: Pack
+        run: cpack --config build/CPackConfig.cmake -C Release
   build-linux:
     runs-on: ${{ matrix.os }}
+    permissions:
+      checks: write
+      contents: read
     strategy:
       matrix:
         os: [ubuntu-24.04]
@@ -77,20 +82,19 @@ jobs:
             export CC=clang
             export CXX=clang++
           fi
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON
+          cmake -S . -B build -G "Ninja Multi-Config" -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON
         shell: bash
-      - name: Build
-        run: cmake --build build
+      - name: Build Debug
+        run: cmake --build build --config Debug
+      - name: Build Release
+        run: cmake --build build --config Release
       - name: Test
-        run: ctest --test-dir build --output-on-failure -T Test --no-compress-output
-      # - name: Upload test results
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: test-results
-      #     path: build/Testing/**/*.xml
-      # - name: Publish test results
-      #   uses: EnricoMi/publish-unit-test-result-action@v2
-      #   with:
-      #     junit_files: build/Testing/**/*.xml
+        run: ctest --test-dir build --output-on-failure --no-compress-output -C Release --output-junit junit.xml
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}-${{ matrix.compiler }}
+          path: build/junit.xml
       - name: Pack
-        run: cpack --config build/CPackConfig.cmake
+        run: cpack --config build/CPackConfig.cmake -C Release
