@@ -84,7 +84,7 @@ jobs:
       - name: Build Release
         run: cmake --build build --config Release
       - name: Test
-        run: ctest --test-dir build --output-on-failure -T Test --no-compress-output
+        run: ctest --test-dir build --output-on-failure -T Test --no-compress-output -C Release
       # - name: Upload test results
       #   uses: actions/upload-artifact@v4
       #   with:
