@@ -7,13 +7,15 @@
 
 namespace morai
 {
-Scheduler::Scheduler(SchedulerParams params)
-  : Scheduler{ Clock{}, std::move(params) }
+Scheduler::Scheduler(SchedulerParams params, const ExceptionHandling exception_handling)
+  : Scheduler{ Clock{}, std::move(params), exception_handling }
 {}
 
-Scheduler::Scheduler(Clock clock, SchedulerParams params)
+Scheduler::Scheduler(Clock clock, SchedulerParams params,
+                     const ExceptionHandling exception_handling)
   : _move_queue(0, params.move_queue_size)
   , _clock(std::move(clock))
+  , _exception_handling(exception_handling)
 {
   std::ranges::sort(params.priority_levels);
   // Ensure at least one queue.
@@ -27,6 +29,10 @@ Scheduler::Scheduler(Clock clock, SchedulerParams params)
     _fibre_queues.emplace_back(priority_level, params.initial_queue_size);
   }
 }
+
+Scheduler::Scheduler(Clock clock, ExceptionHandling exception_handling)
+  : morai::Scheduler{ std::move(clock), SchedulerParams{}, exception_handling }
+{}
 
 Scheduler::~Scheduler() = default;
 
@@ -173,6 +179,11 @@ void Scheduler::updateQueue(const double epoch_time_s, FibreQueue &queue)
     {
       // Propagate exception and expire.
       std::exception_ptr ex = fibre.exception();
+      if (_exception_handling == ExceptionHandling::Rethrow)
+      {
+        std::rethrow_exception(ex);
+      }
+
       try
       {
         if (ex)
