@@ -432,4 +432,41 @@ TEST(Fibre, incorrectPriority)
 
   EXPECT_EQ(log_failures, 3);
 }
+
+TEST(Fibre, capture)
+{
+  Scheduler scheduler;
+  auto state = std::make_shared<int>(42);
+
+  scheduler.start(
+    [](std::shared_ptr<int> state) -> Fibre {
+      // State variable is definitely copied into the fibre frame and remains valid for the life
+      // of the fibre.
+      std::cout << "Better: " << *state << std::endl;
+      co_return;
+    }(state),
+    "Better");
+
+  scheduler.start(
+    [&state]() -> Fibre {
+      // State likely to be valid once the fibre starts, by may become invalid as the fibre
+      // continues.
+      std::cout << "Risky: " << *state << std::endl;
+      co_return;
+    }(),
+    "Risky");
+
+#if 0
+  scheduler.start(
+    [state]() -> Fibre {
+      // Buy the time the fibre starts, the state variable may have been disposed.
+      // This seems to come about if the fibre is moved before it starts.
+      std::cout << "Bad: " << *state << std::endl;
+      co_return;
+    }(),
+    "Bad");
+#endif  // 0
+
+  scheduler.update();
+}
 }  // namespace morai

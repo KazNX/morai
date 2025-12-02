@@ -1,9 +1,6 @@
-#include <cstddef>
 #include <morai/Move.hpp>
 #include <morai/Scheduler.hpp>
 #include <morai/ThreadPool.hpp>
-
-#include <morai/Finally.hpp>
 
 #include <weaver/Input.hpp>
 #include <weaver/Weaver.hpp>
@@ -17,8 +14,6 @@
 #include <random>
 #include <thread>
 #include <vector>
-#include "morai/Common.hpp"
-#include "morai/Resumption.hpp"
 
 namespace
 {
@@ -339,8 +334,7 @@ int main(int argc, char *argv[])
   morai::SchedulerParams render_params{ .initial_queue_size = options.body_count * 2,
                                         .priority_levels = { QP_PreRender, QP_Render,
                                                              QP_PostRender } };
-  std::shared_ptr<GlobalState> state =
-    std::make_shared<GlobalState>(std::move(body_pool_params), std::move(render_params));
+  auto state = std::make_shared<GlobalState>(std::move(body_pool_params), std::move(render_params));
 
   for (auto &base_mass : state->render.base_masses)
   {
