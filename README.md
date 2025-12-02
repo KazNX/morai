@@ -1,4 +1,4 @@
-# Morai fiber libraray
+# Morai fibre library
 
 ![Build](https://github.com/KazNX/morai/actions/workflows/ci.yml/badge.svg)
 
@@ -60,34 +60,6 @@ cmake -B build2 -G"Ninja Multi-Config"
 cmake --build build --config Release -j
 ```
 
-## TODO
+## Overview
 
-- [x] Usage examples
-- [x] Features to consider
-  - [x] Scheduling priority
-    - [x] Set on create
-    - [x] Allocated fixed priority queues in the scheduler
-    - [x] Move fibres to nearest, lower bound priority
-    - [x] Allow head insertion in fibre queues.
-  - [x] Reschedule yield statement - update again on a cycle
-  - [x] Multi-threaded
-    - [x] ThreadPool scheduler
-    - [x] Priority queues, task based scheduler
-      - Each thread picks up a fibre, runs one update cycle, back to job pool
-      - Likely no head insertion
-    - [x] Unit tests
-  - [x] Cross thread scheduling
-    - Multiple schedulers, (e.g., one per thread)
-    - Fibre can elect to move between threads via `co_await move_to_scheduler(...);`
-      - Could be on same thread, but works across threads
-  - [x] Improve awaiting fibres
-    - [x] Change Id to a kind of shared pointer to the Id number
-    - [x] `running()` check becomes an `Id` operation.
-    - [x] Use 1 bit to flag completion
-    - [x] Change await statement to await the `Id` object.
-    - [x] ~~Support awaiting multiple fibres~~
-  - [x] Logging interface
-- Consider
-- [x] `Clock` object given to a scheduler on construction to allow an alternative clock
-  - [x] Allow `ThreadPool` to use a custom clock.
-- [x] `ThreadPool` cancellation list to support ~~`ThreadPool::cancel()`~~ cancellation via `Id::markForCancellation()`.
+See [Morai overview](./docs/morai.md).
