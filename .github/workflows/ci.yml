@@ -34,8 +34,15 @@ jobs:
         run: cmake --build build --config Release
       - name: Test
         run: ctest --test-dir build --output-on-failure --no-compress-output -C Release --output-junit junit.xml
+      - name: Publish test results
+        if: (!cancelled())
+        uses: EnricoMi/publish-unit-test-result-action/windows@v2
+        with:
+          check_name: Test results windows-msvc
+          comment_mode: off
+          files: build/junit.xml
       - name: Upload test results
-        if: always()
+        if: (!cancelled())
         uses: actions/upload-artifact@v4
         with:
           name: test-results-windows-msvc
@@ -53,6 +60,7 @@ jobs:
         run: cpack --config build/CPackConfig.cmake -C Release
   build-linux:
     runs-on: ${{ matrix.os }}
+
     permissions:
       checks: write
       contents: read
@@ -90,8 +98,15 @@ jobs:
         run: cmake --build build --config Release
       - name: Test
         run: ctest --test-dir build --output-on-failure --no-compress-output -C Release --output-junit junit.xml
+      - name: Publish test results
+        if: (!cancelled())
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          check_name: Test results ${{ matrix.os }}-${{ matrix.compiler }}
+          comment_mode: off
+          files: build/junit.xml
       - name: Upload test results
-        if: always()
+        if: (!cancelled())
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.os }}-${{ matrix.compiler }}
