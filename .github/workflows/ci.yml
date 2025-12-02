@@ -47,8 +47,8 @@ jobs:
       #   uses: EnricoMi/publish-unit-test-result-action/composite@v2
       #   with:
       #     junit_files: build/Testing/**/*.xml
-      # - name: Pack
-      #   run: cpack --config build/CPackConfig.cmake
+      - name: Pack
+        run: cpack --config build/CPackConfig.cmake -C Release
   build-linux:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -77,10 +77,12 @@ jobs:
             export CC=clang
             export CXX=clang++
           fi
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON
+          cmake -S . -B build -G "Ninja Multi-Config" -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON
         shell: bash
-      - name: Build
-        run: cmake --build build
+      - name: Build Debug
+        run: cmake --build build --config Debug
+      - name: Build Release
+        run: cmake --build build --config Release
       - name: Test
         run: ctest --test-dir build --output-on-failure -T Test --no-compress-output
       # - name: Upload test results
@@ -93,4 +95,4 @@ jobs:
       #   with:
       #     junit_files: build/Testing/**/*.xml
       - name: Pack
-        run: cpack --config build/CPackConfig.cmake
+        run: cpack --config build/CPackConfig.cmake -C Release
