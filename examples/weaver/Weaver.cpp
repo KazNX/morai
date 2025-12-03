@@ -4,12 +4,53 @@
 
 #include <curses.h>
 
-#include <array>
 #include <stdexcept>
 
 namespace weaver
 {
 static_assert(sizeof(chtype) == sizeof(Character), "Character size mismatch");
+
+namespace
+{
+chtype convertForDraw(const Character ch)
+{
+  const auto mods = static_cast<Modifier>((ch >> 16u) & 0xFFu);
+  const auto colour = static_cast<chtype>((ch >> 24u) & 0xFFu);
+  auto result = static_cast<chtype>(ch & 0x0000FFFFu);
+
+  if (colour)
+  {
+    result |= COLOR_PAIR(colour);
+  }
+
+  if ((mods & Modifier::Bold) == Modifier::Bold)
+  {
+    result |= A_BOLD;
+  }
+  if ((mods & Modifier::Italic) == Modifier::Italic)
+  {
+    result |= A_ITALIC;
+  }
+  if ((mods & Modifier::Underline) == Modifier::Underline)
+  {
+    result |= A_UNDERLINE;
+  }
+  if ((mods & Modifier::Blink) == Modifier::Blink)
+  {
+    result |= A_BLINK;
+  }
+  if ((mods & Modifier::Inverse) == Modifier::Inverse)
+  {
+    result |= A_REVERSE;
+  }
+  if ((mods & Modifier::Hidden) == Modifier::Hidden)
+  {
+    result |= A_INVIS;
+  }
+
+  return result;
+}
+}  // namespace
 
 void View::setString(Coord at, std::span<const Character> text, bool clear_eol)
 {
@@ -123,7 +164,7 @@ void Screen::draw()
         const auto ch = layer.view.character({ x, y });
         if (ch != 0)
         {
-          mvwaddch(_imp->window.get(), y, x, static_cast<chtype>(ch));
+          mvwaddch(_imp->window.get(), y, x, convertForDraw(ch));
         }
       }
     }
