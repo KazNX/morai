@@ -7,4 +7,7 @@ function(morai_configure_target TARGET)
       # More warnings.
       $<$<CXX_COMPILER_ID:AppleClang,Clang,GCC,IntelLLVM>:-Wall -Wextra -Wpedantic -Werror -Wno-logical-op-parentheses>
   )
+  target_link_options(${TARGET} PRIVATE
+    $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:/debug>
+  )
 endfunction(morai_configure_target)

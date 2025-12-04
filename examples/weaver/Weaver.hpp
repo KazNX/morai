@@ -67,6 +67,16 @@ inline Coord &operator/=(Coord &a, const int scalar)
   return a;
 }
 
+inline bool operator==(const Coord &a, const Coord &b)
+{
+  return a.x == b.x && a.y == b.y;
+}
+
+inline bool operator!=(const Coord &a, const Coord &b)
+{
+  return !operator==(a, b);
+}
+
 struct WEAVER_EXPORT Size
 {
   int width = 0;
@@ -87,8 +97,8 @@ inline Coord clamp(const Viewport &view, const Coord &coord)
 
 inline Coord wrap(const Viewport &view, Coord coord)
 {
-  coord.x = (coord.x - view.origin.x) % view.size.width + view.origin.x;
-  coord.y = (coord.y - view.origin.y) % view.size.height + view.origin.y;
+  coord.x = (coord.x - view.origin.x + view.size.width) % view.size.width + view.origin.x;
+  coord.y = (coord.y - view.origin.y + view.size.height) % view.size.height + view.origin.y;
   return coord;
 }
 

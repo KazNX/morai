@@ -388,7 +388,7 @@ int main(int argc, char *argv[])
     return error_code;
   }
 
-  std::shared_ptr<GlobalState> state = std::make_shared<GlobalState>();
+  auto state = std::make_shared<GlobalState>();
 
   startFibres(state);
 

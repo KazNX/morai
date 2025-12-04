@@ -156,6 +156,16 @@ KeyState Input::keyState(const Key key)
 {
   const uint32_t vk_code = mapKey(key);
 
+  if (key == Key::Space)
+  {
+    // Use GetKeyState for VK_SPACE as a workaround
+    const SHORT state = GetKeyState(VK_SPACE);
+    if ((state & 0x8000) != 0)
+    {
+      return KeyState::Down;
+    }
+    return KeyState::Up;
+  }
   if (vk_code)
   {
     const SHORT state = GetAsyncKeyState(static_cast<int>(vk_code));

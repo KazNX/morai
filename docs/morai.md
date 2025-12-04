@@ -338,3 +338,44 @@ only resume once it is in the new scheduler, but this may take longer.
 ## Pitfalls
 
 - Lifetime and ownership - passing or capturing references
+- Avoid capturing by value in lambda expression fibres. Prefer arguments - see example below.
+  - See also the fibre test `Fibre.capture`.
+
+```c++
+#include <morai/Scheduler.hpp>
+
+#include <iostream>
+
+int main()
+{
+  using namespace morai;
+  scheduler.start(
+    [](std::shared_ptr<int> state) -> Fibre {
+      // State variable is definitely copied into the fibre frame and remains valid for the life
+      // of the fibre.
+      std::cout << "Better: " << *state << std::endl;
+      co_return;
+    }(state),
+    "Better");
+
+  scheduler.start(
+    [&state]() -> Fibre {
+      // State likely to be valid once the fibre starts, by may become invalid as the fibre
+      // continues.
+      std::cout << "Risky: " << *state << std::endl;
+      co_return;
+    }(),
+    "Risky");
+
+  scheduler.start(
+    [state]() -> Fibre {
+      // Buy the time the fibre starts, the state variable may have been disposed.
+      // This seems to come about if the fibre is moved before it starts.
+      std::cout << "Bad: " << *state << std::endl;
+      co_return;
+    }(),
+    "Bad");
+
+  scheduler.update();
+}
+```
