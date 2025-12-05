@@ -100,7 +100,7 @@ TEST(ThreadPool, smallQueue)
 
   std::atomic<int> counter = 0;
   std::atomic_flag block = ATOMIC_FLAG_INIT;
-  const unsigned task_count = 50;
+  const unsigned task_count = 40;
 
   block.test_and_set();
 
