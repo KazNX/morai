@@ -152,7 +152,7 @@ void Screen::draw()
     const int ch = wgetch(_imp->window.get());
     _imp->input_hook(ch);
   }
-  wclear(_imp->window.get());  // Suboptimal
+  werase(_imp->window.get());
   int width = getmaxx(_imp->window.get());
   int height = getmaxy(_imp->window.get());
   for (const auto &layer : _imp->layers)

@@ -189,14 +189,14 @@ morai::Fibre body_fibre(std::shared_ptr<GlobalState> state, Body body)
 
     ++state->render.ready_count;
 
-    // Wait for frame sync.
-    co_await [initial_stamp = state->render.stamp, state]() {
-      return state->render.stamp != initial_stamp;
-    };
+    const uint32_t initial_stamp = state->render.stamp;
 
     // Reschedule to after render update. That will give an the immediate dt from the current
     // update.
     co_await morai::reschedule(QP_PostRender);
+
+    // Wait for frame sync.
+    co_await [initial_stamp, state]() { return state->render.stamp != initial_stamp; };
 
     // RenderUpdate dt based on the render delay.
     dt = state->render.dt;

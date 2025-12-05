@@ -435,7 +435,7 @@ TEST(Fibre, incorrectPriority)
 
 TEST(Fibre, capture)
 {
-  Scheduler scheduler;
+  Scheduler scheduler{ test::makeClock() };
   auto state = std::make_shared<int>(42);
 
   scheduler.start(
@@ -468,5 +468,51 @@ TEST(Fibre, capture)
 #endif  // 0
 
   scheduler.update();
+}
+
+TEST(Fibre, conditionReady)
+{
+  // Test waiting - yield vs await - an already met condition.
+  Scheduler scheduler{ test::makeClock() };
+
+  const auto fibre_yield = []() -> Fibre {
+    std::cout << "Yield started\n";
+    co_yield wait([]() { return true; });
+    std::cout << "Yield done\n";
+  };
+
+  const auto fibre_wait = []() -> Fibre {
+    std::cout << "Wait started\n";
+    co_await wait([]() { return true; });
+    std::cout << "Wait done\n";
+  };
+
+  const auto fibre_await = []() -> Fibre {
+    std::cout << "Await started\n";
+    co_await []() { return true; };
+    std::cout << "Await done\n";
+  };
+
+  Id id_yield = scheduler.start(fibre_yield(), "yield");
+  Id id_wait = scheduler.start(fibre_wait(), "wait");
+  Id id_await = scheduler.start(fibre_await(), "await");
+
+  EXPECT_TRUE(id_yield.running());
+  EXPECT_TRUE(id_wait.running());
+  EXPECT_TRUE(id_await.running());
+  std::cout << "update 1\n";
+  scheduler.update();
+  // The two await fibres should have completed as there the condition was already met. The yield
+  // always suspends and the condition is checked later.
+  EXPECT_TRUE(id_yield.running());
+  EXPECT_FALSE(id_wait.running());
+  EXPECT_FALSE(id_await.running());
+  EXPECT_FALSE(scheduler.empty());
+  EXPECT_EQ(scheduler.runningCount(), 1);
+  std::cout << "update 2\n";
+  scheduler.update();
+  std::cout << "post update\n";
+  EXPECT_FALSE(id_yield.running());
+  EXPECT_TRUE(scheduler.empty());
 }
 }  // namespace morai
