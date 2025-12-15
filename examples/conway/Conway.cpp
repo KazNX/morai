@@ -326,17 +326,11 @@ int main(int argc, char *argv[])
   if (!options.edit)
   {
     state->scheduler.start(
-      [&state]() -> morai::Fibre {
+      [](std::shared_ptr<GlobalState> state) -> morai::Fibre {
         state->setEditMode(false);
         co_return;
-      }(),
+      }(state),
       "AutoSimulate");
-    // state->scheduler.start(
-    //   [](std::shared_ptr<GlobalState> state) -> morai::Fibre {
-    //     state->setEditMode(false);
-    //     co_return;
-    //   }(state),
-    //   "AutoSimulate");
   }
 
   // Setup render scheduler.
