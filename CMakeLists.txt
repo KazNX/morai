@@ -23,6 +23,7 @@ include(tools)
 # Add project level options here.
 option(MORAI_BUILD_TESTS "Build unit tests?" ON)
 option(MORAI_BUILD_EXAMPLES "Build unit tests?" OFF)
+option(MORAI_BUILD_DOCS "Build documentation?" OFF)
 
 set(ConfigPackageLocation lib/cmake/morai)
 
@@ -68,6 +69,18 @@ if(MORAI_BUILD_TESTS)
   # Note: not all projects under tests actually add something for CTest.
   enable_testing()
   add_subdirectory(test)
+endif()
+
+if(MORAI_BUILD_DOCS)
+  include(doxygen)
+  doxygen_add_target(morai
+    NAME Morai
+    TARGETS morai weaver
+    DIRS docs
+    DOXYFILE cmake/doxygen.in
+    EXCLUDE */MPMPQueue.hpp README.md
+    MD_MAIN docs/morai.md
+    )
 endif()
 
 configure_file(

@@ -5,8 +5,6 @@
 #include <string>
 #include <string_view>
 
-/// Logging interface. Provides a @c LogHook which can be set via @c setHook(). All log calls go via
-/// this hook. The default logs to stdout.
 namespace morai::log
 {
 /// Logging level options.

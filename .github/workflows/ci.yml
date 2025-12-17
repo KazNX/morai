@@ -27,7 +27,7 @@ jobs:
         with:
           vcpkgJsonGlob: "**/vcpkg.json"
       - name: CMake Configure
-        run: cmake -S . -B build -G "Ninja Multi-Config" -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake -DVCPKG_MANIFEST_FEATURES=examples
+        run: cmake -S . -B build -G "Ninja Multi-Config" -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON -DMORAI_BUILD_DOCS=ON -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake -DVCPKG_MANIFEST_FEATURES=examples
       - name: Build Debug
         run: cmake --build build --config Debug
       - name: Build Release
@@ -90,7 +90,7 @@ jobs:
             export CC=clang
             export CXX=clang++
           fi
-          cmake -S . -B build -G "Ninja Multi-Config" -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON
+          cmake -S . -B build -G "Ninja Multi-Config" -DMORAI_BUILD_TESTS=ON -DMORAI_BUILD_EXAMPLES=ON -DMORAI_BUILD_DOCS=ON
         shell: bash
       - name: Build Debug
         run: cmake --build build --config Debug
