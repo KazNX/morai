@@ -39,7 +39,7 @@ int main()
 
   while (!scheduler.empty())
   {
-    scheduler.update(0.0); // "time" is frozen for this example.
+    scheduler.update();
   }
 }
 
@@ -76,8 +76,8 @@ void Turret::update(float dt)
 }
 ```
 
-This code assumes the `Turret::update()` function is called regularly and is re-entrant. The
-`update()` function must determine the current state of the object to determine the appropriate
+This code assumes the `Turret::update()` function is called regularly and is inherently stateful.
+The `update()` function must reevaluate the current state of the object to determine the appropriate
 logic to perform, evaluate external state, then initiate new effects. This becomes more complicated
 as we attempt to track multiple states in parallel, such as making turret alignment independent of
 firing.
@@ -129,8 +129,8 @@ morai::Fibre Turret::aimAndFireFibre(std::shared_ptr<Turret> turret)
 It is critical that each fibre periodically suspend to avoid starving other fibres or the calling
 thread. This is done by either a `co_yield` or `co_await` statement. These statements are somewhat
 interchangeable in the Morai library, but have different semantics. A `co_yield` always suspends
-until at least the next update cycle, while a `co_await` suspends control only if the wait condition
-is unmet.
+until at least the next update cycle, while a `co_await` suspends only if the wait condition is
+unmet.
 
 The following `co_yield` patterns are supported:
 
@@ -146,8 +146,8 @@ The following `co_yield` patterns are supported:
     for no timeout).
     - `condition` is a callable object - `bool f()`.
     - `timeout` (optional) may be a `double`, `float` or `std::chrono::duration` as per sleep.
-    - You may need to validate the `condition` on resume when a `timeout` was specified. The
-      condition may still be false once the timeout has elapsed.
+    - Note: the `condition` may evaluate to false when using a `timeout` and that `timeout` has
+      elapsed before the `condition` is met.
 
 The following `co_await` patterns are supported:
 
