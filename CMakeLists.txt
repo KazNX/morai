@@ -97,7 +97,16 @@ export(EXPORT morai-targets
 install(
   FILES
     "${CMAKE_CURRENT_BINARY_DIR}/morai-config.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/morai-targets.cmake"
+  DESTINATION "${ConfigPackageLocation}"
+  COMPONENT Dev
+)
+
+# Install a relocatable targets file. Unlike the build-tree file produced by export() above (which encodes absolute
+# build paths for use from the build directory), install(EXPORT) generates paths relative to the install prefix.
+install(
+  EXPORT morai-targets
+  FILE morai-targets.cmake
+  NAMESPACE morai::
   DESTINATION "${ConfigPackageLocation}"
   COMPONENT Dev
 )
